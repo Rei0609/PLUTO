@@ -1,0 +1,10 @@
+**/*.dbl
+**/*.flt
+**/*.png
+**/*.vkt
+**/*.hdf5
+**/makefile
+**/*.log
+**/*.out
+**/*.o
+**/.ipynb_checkpoints
