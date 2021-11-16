@@ -1,5 +1,5 @@
 #define  PHYSICS                        HD
-#define  DIMENSIONS                     2
+#define  DIMENSIONS                     1
 #define  GEOMETRY                       SPHERICAL
 #define  BODY_FORCE                     NO
 #define  COOLING                        NO
@@ -20,11 +20,14 @@
 
 /* -- user-defined parameters (labels) -- */
 
-#define  POWER                          0
-#define  MACH                           1
-#define  SPEED                          2
+#define  PAR_POWER                      0
+#define  PAR_MACH                       1
+#define  PAR_SPEED                      2
 
 /* [Beg] user-defined constants (do not change this line) */
 
+#define  UNIT_DENSITY                   (0.6036*CONST_amu)
+#define  UNIT_VELOCITY                  CONST_c
+#define  UNIT_LENGTH                    (1000.*CONST_pc)
 
 /* [End] user-defined constants (do not change this line) */

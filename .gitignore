@@ -8,3 +8,8 @@
 **/*.out
 **/*.o
 **/.ipynb_checkpoints
+Lib/
+Config/
+Doc/
+Test_Problems/
+Real_Problems/AGN_wind/pluto

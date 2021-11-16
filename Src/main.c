@@ -33,10 +33,10 @@
 #include "globals.h"
 
 #ifndef SHOW_TIME_STEPS
-  #define SHOW_TIME_STEPS  NO  /* Show time steps due to different processes */
+  #define SHOW_TIME_STEPS  YES  /* Show time steps due to different processes */
 #endif
 #ifndef SHOW_TIMING
-  #define SHOW_TIMING      NO  /* Compute CPU timing between steps */
+  #define SHOW_TIMING      YES  /* Compute CPU timing between steps */
 #endif
 
 static double   NextTimeStep (timeStep *, Runtime *, Grid *);

@@ -13,6 +13,20 @@
 /* ///////////////////////////////////////////////////////////////////// */
 #include "pluto.h"
 
+
+typedef struct {
+    double power;
+    double mach;
+    double speed;
+    double area;
+    double rho;
+    double prs;
+} AGN;
+
+
+AGN agn;
+
+
 /* ********************************************************************* */
 void Init (double *v, double x1, double x2, double x3)
 /*! 
@@ -41,14 +55,32 @@ void Init (double *v, double x1, double x2, double x3)
  *
  *********************************************************************** */
 {
-  v[RHO] = 1.0;
-  v[VX1] = 0.0;
-  v[VX2] = 0.0;
-  v[VX3] = 0.0;
-  #if HAVE_ENERGY
-  v[PRS] = 1.0;
-  #endif
+  
+  double te;
+  double r, r_in;
+
+  r = x1;
+  r_in = g_domBeg[IDIR];
+
+  te = 1.e7 / KELVIN;
+
+  v[RHO] = 1;
+  v[VX1] = 0;
+  v[VX2] = 0;
+  v[VX3] = 0;
+  v[PRS] = v[RHO] * te / 0.6063; 
   v[TRC] = 0.0;
+
+  if (r < -3 * r_in) {
+      v[RHO] = 10;
+      v[VX1] = 0.1;
+      v[VX2] = 0;
+      v[VX3] = 0;
+      v[PRS] = 1.e-5;
+      v[TRC] = 1.;
+  }
+
+
 
   #if PHYSICS == MHD || PHYSICS == RMHD
   v[BX1] = 0.0;
@@ -61,7 +93,7 @@ void Init (double *v, double x1, double x2, double x3)
   #endif
 }
 
-/* ********************************************************************* */
+ /********************************************************************* */
 void InitDomain (Data *d, Grid *grid)
 /*! 
  * Assign initial condition by looping over the computational domain.
@@ -72,7 +104,47 @@ void InitDomain (Data *d, Grid *grid)
  *
  *********************************************************************** */
 {
+
+
+  double r, q, r_in, te;
+  double mach, power, speed, area;
+  double rho, vx1, vx2, vx3, prs;
+
+  /* Input parameters */
+  mach = g_inputParam[PAR_MACH];
+  power = g_inputParam[PAR_POWER];
+  speed = g_inputParam[PAR_SPEED];
+
+
+  /* Normalize to code units */
+  power /= UNIT_VELOCITY * UNIT_VELOCITY * UNIT_VELOCITY * 
+	  UNIT_DENSITY * UNIT_LENGTH * UNIT_LENGTH;
+  
+  //r = x1;
+  r_in = g_domBeg[IDIR];
+
+  /* Flux through surface of a sphere */
+  area = 4 * CONST_PI * r_in * r_in;
+
+  /* Primitive variables from input parameters */
+
+  q = (g_gamma - 1.) * mach * mach;
+  q = 1. + 2. / q;
+
+  rho = 2. * power / (speed * speed * speed * area * q);
+  prs = (2. * power / speed - rho * speed * speed * area) * 
+	    (g_gamma - 1.) / (2. * g_gamma * area);
+  //prs = power / speed * (1. - 1. / q) * (g_gamma - 1.) / (g_gamma * area);
+
+  agn.power = power;
+  agn.mach = mach;
+  agn.speed = speed;
+  agn.area = area;
+  agn.rho = rho;
+  agn.prs = prs;
+
 }
+
 
 /* ********************************************************************* */
 void Analysis (const Data *d, Grid *grid)
@@ -142,7 +214,16 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
 
   if (side == X1_BEG){  /* -- X1_BEG boundary -- */
     if (box->vpos == CENTER) {
-      BOX_LOOP(box,k,j,i){  }
+      BOX_LOOP(box,k,j,i){ 
+	  d->Vc[RHO][k][j][i] = agn.rho;
+	  d->Vc[VX1][k][j][i] = agn.speed;
+	  //d->Vc[RHO][k][j][i] = 10;
+	  //d->Vc[VX1][k][j][i] = 0.1;
+	  d->Vc[VX2][k][j][i] = 0;
+	  d->Vc[VX3][k][j][i] = 0;
+	  d->Vc[PRS][k][j][i] = agn.prs;
+	  d->Vc[TRC][k][j][i] = 1.;
+      }
     }else if (box->vpos == X1FACE){
       BOX_LOOP(box,k,j,i){  }
     }else if (box->vpos == X2FACE){
