@@ -27,6 +27,30 @@ typedef struct {
 AGN agn;
 
 
+void rhs_poisson(double x, double *y, double *f) {
+
+  /* RHS of poisson equaiton for double isothermal from 
+   * Sutherland & Bicknell (2007), Eq. 5. 
+   * The second order differential equaiton is split into
+   * two first order diff. equations, with y[0] being the potential,
+   * and y[1] the differential of the potential (the force). */
+
+  double b, h, kappa, l, rate;
+
+  b = 2 / x;
+  kappa = 2.;
+  l = 10.;
+  lok2 = l / kappa;
+  lok2 = lok2 * lok2;
+  h = exp(-y[0]) + lok2 * exp(-kappa * kappa * y[0]);
+  h = 9 * h;
+
+  f[0] = y[1];
+  f[1] = h - b * y[1];
+
+}
+
+
 /* ********************************************************************* */
 void Init (double *v, double x1, double x2, double x3)
 /*! 
@@ -142,6 +166,45 @@ void InitDomain (Data *d, Grid *grid)
   agn.area = area;
   agn.rho = rho;
   agn.prs = prs;
+
+  
+  /* set up garactic programs */
+
+  /* Pointer to RHS function */
+
+  void * rhs;
+  rhs = rhs_poisson;
+
+  /* Initial condition and solution to potential.
+   * y[0] is the potential, and y[1] the force. */
+  double nvar, y[2];
+  nvar = 2;
+  y[0] = 0;
+  y[1] = 0;
+  
+  /* Domain info (r and dr) for ODE solver */
+  int   i, j, k, nv;
+  double  *x1, *x2, *x3;
+  x1 = grid->x[IDIR];
+  //x2 = grid->x[JDIR];
+  //x3 = grid->x[KDIR];
+
+  double dx1_rmin = 1.e30;
+  dx1 = grid->dx[IDIR];
+  IDOM_LOOP(i) MIN(dx1_min, dx1[i]);
+
+  double rho[NX1], prs[NX1], psi[NX1], g[NX1];
+
+  IDOM_LOOP(i) {
+    ODE_Solve(y, nvar, 0., x1[i], dx1_min, rhs, ODE_RK4);
+    psi[i] = y[0];
+    g[i] = y[1];
+    rho[i] = exp(-y[0]);
+  }
+
+  DOM_LOOP(k, j, i) {
+
+  }
 
 }
 
