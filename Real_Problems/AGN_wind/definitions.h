@@ -7,7 +7,7 @@
 #define  TIME_STEPPING                  RK3
 #define  NTRACER                        1
 #define  PARTICLES                      NO
-#define  USER_DEF_PARAMETERS            3
+#define  USER_DEF_PARAMETERS            8
 
 /* -- physics dependent declarations -- */
 
@@ -23,6 +23,11 @@
 #define  PAR_POWER                      0
 #define  PAR_MACH                       1
 #define  PAR_SPEED                      2
+#define  PAR_NHOT                       3
+#define  PAR_THOT                       4
+#define  PAR_TVIR                       5
+#define  PAR_KAPPA                      6
+#define  PAR_LAMBDA                     7
 
 /* [Beg] user-defined constants (do not change this line) */
 

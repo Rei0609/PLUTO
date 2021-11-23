@@ -38,8 +38,8 @@ void rhs_poisson(double x, double *y, double *f) {
   double b, h, kappa, l, rate;
 
   b = 2 / x;
-  kappa = 2.;
-  l = 10.;
+  kappa = g_inputParam[PAR_KAPPA];
+  l = g_inputParam[PAR_LAMBDA];
   lok2 = l / kappa;
   lok2 = lok2 * lok2;
   h = exp(-y[0]) + lok2 * exp(-kappa * kappa * y[0]);
@@ -86,24 +86,14 @@ void Init (double *v, double x1, double x2, double x3)
   r = x1;
   r_in = g_domBeg[IDIR];
 
-  te = 1.e7 / KELVIN;
+  te = g_inputParam[PAR_THOT] / KELVIN;
 
-  v[RHO] = 1;
+  v[RHO] = g_inputParam[PAR_NHOT];
   v[VX1] = 0;
   v[VX2] = 0;
   v[VX3] = 0;
   v[PRS] = v[RHO] * te / 0.6063; 
   v[TRC] = 0.0;
-
-  if (r < -3 * r_in) {
-      v[RHO] = 10;
-      v[VX1] = 0.1;
-      v[VX2] = 0;
-      v[VX3] = 0;
-      v[PRS] = 1.e-5;
-      v[TRC] = 1.;
-  }
-
 
 
   #if PHYSICS == MHD || PHYSICS == RMHD
@@ -188,18 +178,40 @@ void InitDomain (Data *d, Grid *grid)
   x1 = grid->x[IDIR];
   //x2 = grid->x[JDIR];
   //x3 = grid->x[KDIR];
+  
+  /* Define rd */
+  double rd;
+  double sigma_d, grav, rho_d0, kb, m_p; 
+  m_p = 1.035 * 1.e-27;
+  kb = 1.380649 * 1.e-23;
+  siguma_d = sqrt(g_inputParam[PAR_TVIR] * kb / m_p);
+  grav = 6.6743 * 1.e-11;
+  rd = 4 * CONST_PI * grav * g_inputParam[NHOT] * m_p;
+  rd = 9 * sigma_d * sigma_d / rd;
+  rd = sqrt(rd);
+   /* Change to kPC */
+  rd = rd / (1000 * UNIT_LENGTH);
 
-  double dx1_rmin = 1.e30;
+  double dx1_min = 1.e30;
   dx1 = grid->dx[IDIR];
+
+  /* Normalize x1, dx1 */
+  x1 = x1 / rd;
+  dx1 = dx1 / rd;
+  dx1_min = dx1_min / rd;
+
   IDOM_LOOP(i) MIN(dx1_min, dx1[i]);
 
-  double rho[NX1], prs[NX1], psi[NX1], g[NX1];
+  double rho[NX1], prs[NX1], psi[NX1], g[NX1], tratio, te;
 
   IDOM_LOOP(i) {
     ODE_Solve(y, nvar, 0., x1[i], dx1_min, rhs, ODE_RK4);
     psi[i] = y[0];
     g[i] = y[1];
-    rho[i] = exp(-y[0]);
+    tratio = g_inputParam[PAR_TVIR] / g_inputParam[PAR_THOT];
+    te = g_inputParam[THOT] / KELVIN;
+    rho[i] = g_inputParam[PAR_NHOT] * m_p * exp(-tratio * y[0]);
+    prs[i] = rho[i] * te / 0.6063;
   }
 
   DOM_LOOP(k, j, i) {
