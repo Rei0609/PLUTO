@@ -35,7 +35,7 @@ void rhs_poisson(double x, double *y, double *f) {
    * two first order diff. equations, with y[0] being the potential,
    * and y[1] the differential of the potential (the force). */
 
-  double b, h, kappa, l, rate;
+  double b, h, kappa, l, rate, lok2;
 
   b = 2 / x;
   kappa = g_inputParam[PAR_KAPPA];
@@ -120,9 +120,9 @@ void InitDomain (Data *d, Grid *grid)
 {
 
 
-  double r, q, r_in, te;
+  double r, q, r_in;
   double mach, power, speed, area;
-  double rho, vx1, vx2, vx3, prs;
+  double rho0, vx1, vx2, vx3, prs0;
 
   /* Input parameters */
   mach = g_inputParam[PAR_MACH];
@@ -145,8 +145,8 @@ void InitDomain (Data *d, Grid *grid)
   q = (g_gamma - 1.) * mach * mach;
   q = 1. + 2. / q;
 
-  rho = 2. * power / (speed * speed * speed * area * q);
-  prs = (2. * power / speed - rho * speed * speed * area) * 
+  rho0 = 2. * power / (speed * speed * speed * area * q);
+  prs0= (2. * power / speed - rho0 * speed * speed * area) * 
 	    (g_gamma - 1.) / (2. * g_gamma * area);
   //prs = power / speed * (1. - 1. / q) * (g_gamma - 1.) / (g_gamma * area);
 
@@ -154,8 +154,8 @@ void InitDomain (Data *d, Grid *grid)
   agn.mach = mach;
   agn.speed = speed;
   agn.area = area;
-  agn.rho = rho;
-  agn.prs = prs;
+  agn.rho = rho0;
+  agn.prs = prs0;
 
   
   /* set up garactic programs */
@@ -165,13 +165,7 @@ void InitDomain (Data *d, Grid *grid)
   void * rhs;
   rhs = rhs_poisson;
 
-  /* Initial condition and solution to potential.
-   * y[0] is the potential, and y[1] the force. */
-  double nvar, y[2];
-  nvar = 2;
-  y[0] = 0;
-  y[1] = 0;
-  
+ 
   /* Domain info (r and dr) for ODE solver */
   int   i, j, k, nv;
   double  *x1, *x2, *x3;
@@ -180,41 +174,52 @@ void InitDomain (Data *d, Grid *grid)
   //x3 = grid->x[KDIR];
   
   /* Define rd */
-  double rd;
-  double sigma_d, grav, rho_d0, kb, m_p; 
-  m_p = 1.035 * 1.e-27;
-  kb = 1.380649 * 1.e-23;
-  siguma_d = sqrt(g_inputParam[PAR_TVIR] * kb / m_p);
-  grav = 6.6743 * 1.e-11;
-  rd = 4 * CONST_PI * grav * g_inputParam[NHOT] * m_p;
-  rd = 9 * sigma_d * sigma_d / rd;
-  rd = sqrt(rd);
-   /* Change to kPC */
-  rd = rd / (1000 * UNIT_LENGTH);
+  double rd, rb;
+  double sigma_d, l, kappa; 
+  sigma_d = sqrt(g_inputParam[PAR_TVIR] * CONST_kB / CONST_mp) / (UNIT_VELOCITY);
+  rb = g_inputParam[PAR_RBAR];
+  //rd = 4 * CONST_PI * CONST_G * rho_d;
+  //rd = 9 * sigma_d * sigma_d / rd;
+  //rd = sqrt(rd);
+  kappa = g_inputParam[PAR_KAPPA];
+  l = g_inputParam[PAR_LAMBDA];
+  rd = l * rb; 
 
+
+  /* Find minimum dx1 */
   double dx1_min = 1.e30;
+  double *dx1, *dx2, *dx3;
   dx1 = grid->dx[IDIR];
+  ITOT_LOOP(i) dx1_min = MIN(dx1_min, dx1[i]);
 
-  /* Normalize x1, dx1 */
-  x1 = x1 / rd;
-  dx1 = dx1 / rd;
-  dx1_min = dx1_min / rd;
+  /* Initial condition and solution to potential.
+   * y[0] is the potential, and y[1] the force. */
+  double nvar, y[2];
+  nvar = 2;
+  y[0] = 1.e-12;
+  y[1] = 1.e-12;
 
-  IDOM_LOOP(i) MIN(dx1_min, dx1[i]);
+  double rho[NX1_TOT], prs[NX1_TOT], psi[NX1_TOT], tratio, te;
 
-  double rho[NX1], prs[NX1], psi[NX1], g[NX1], tratio, te;
-
-  IDOM_LOOP(i) {
-    ODE_Solve(y, nvar, 0., x1[i], dx1_min, rhs, ODE_RK4);
-    psi[i] = y[0];
-    g[i] = y[1];
+  /* Solve the 1D radial Poisson equation to obtain profiles of the 
+   * potential, density, and pressure.
+   * We also want the values in the boundaries */
+  print ("> Starting setup of gravitational potential... \n");  
+  ITOT_LOOP(i) {
+    ODE_Solve(y, nvar, dx1_min*1.e-3/rd, x1[i]/rd, 0.2*dx1_min/rd, rhs, ODE_RK4);
+    psi[i] = y[0] * sigma_d;
     tratio = g_inputParam[PAR_TVIR] / g_inputParam[PAR_THOT];
-    te = g_inputParam[THOT] / KELVIN;
-    rho[i] = g_inputParam[PAR_NHOT] * m_p * exp(-tratio * y[0]);
+    te = g_inputParam[PAR_THOT] / KELVIN;
+    rho[i] = g_inputParam[PAR_NHOT] * exp(-tratio * y[0]);
     prs[i] = rho[i] * te / 0.6063;
   }
+  print ("> Done\n");
 
+  /* Fill grid data arrays with calculated profile */
   DOM_LOOP(k, j, i) {
+
+    d->Vc[RHO][k][j][i] = rho[i];
+    d->Vc[PRS][k][j][i] = prs[i];
 
   }
 
@@ -292,8 +297,6 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
       BOX_LOOP(box,k,j,i){ 
 	  d->Vc[RHO][k][j][i] = agn.rho;
 	  d->Vc[VX1][k][j][i] = agn.speed;
-	  //d->Vc[RHO][k][j][i] = 10;
-	  //d->Vc[VX1][k][j][i] = 0.1;
 	  d->Vc[VX2][k][j][i] = 0;
 	  d->Vc[VX3][k][j][i] = 0;
 	  d->Vc[PRS][k][j][i] = agn.prs;
