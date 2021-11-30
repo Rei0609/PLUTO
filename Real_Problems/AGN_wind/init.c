@@ -26,6 +26,18 @@ typedef struct {
 
 AGN agn;
 
+typedef struct {
+    double *rho;
+    double *prs;
+} HOT_HALO;
+HOT_HALO hot;
+
+typedef struct {
+    double *psi;
+    double *g;
+} DOUBLE_ISOTHERMAL;
+DOUBLE_ISOTHERMAL di;
+
 
 void rhs_poisson(double x, double *y, double *f) {
 
@@ -196,10 +208,16 @@ void InitDomain (Data *d, Grid *grid)
    * y[0] is the potential, and y[1] the force. */
   double nvar, y[2];
   nvar = 2;
-  y[0] = 1.e-12;
-  y[1] = 1.e-12;
+  y[0] = 0.;
+  y[1] = 0.;
 
-  double rho[NX1_TOT], prs[NX1_TOT], psi[NX1_TOT], tratio, te;
+  double tratio, te;
+
+
+  hot.rho = ARRAY_1D(NX1_TOT, double);
+  hot.prs = ARRAY_1D(NX1_TOT, double);
+  di.psi = ARRAY_1D(NX1_TOT, double);
+  di.g = ARRAY_1D(NX1_TOT, double);
 
   /* Solve the 1D radial Poisson equation to obtain profiles of the 
    * potential, density, and pressure.
@@ -207,19 +225,21 @@ void InitDomain (Data *d, Grid *grid)
   print ("> Starting setup of gravitational potential... \n");  
   ITOT_LOOP(i) {
     ODE_Solve(y, nvar, dx1_min*1.e-3/rd, x1[i]/rd, 0.2*dx1_min/rd, rhs, ODE_RK4);
-    psi[i] = y[0] * sigma_d;
+    //di.psi[i] = y[0] * sigma_d * sigma_d;
+    di.g[i] = y[1] * sigma_d * sigma_d; 
     tratio = g_inputParam[PAR_TVIR] / g_inputParam[PAR_THOT];
     te = g_inputParam[PAR_THOT] / KELVIN;
-    rho[i] = g_inputParam[PAR_NHOT] * exp(-tratio * y[0]);
-    prs[i] = rho[i] * te / 0.6063;
+    hot.rho[i] = g_inputParam[PAR_NHOT] * exp(-tratio * y[0]);
+    hot.prs[i] = hot.rho[i] * te / 0.6063;
   }
   print ("> Done\n");
+ 
 
   /* Fill grid data arrays with calculated profile */
   DOM_LOOP(k, j, i) {
 
-    d->Vc[RHO][k][j][i] = rho[i];
-    d->Vc[PRS][k][j][i] = prs[i];
+    d->Vc[RHO][k][j][i] = hot.rho[i];
+    d->Vc[PRS][k][j][i] = hot.prs[i];
 
   }
 
@@ -388,7 +408,23 @@ void BodyForceVector(double *v, double *g, double x1, double x2, double x3)
  *
  *********************************************************************** */
 {
-  g[IDIR] = 0.0;
+  double ratio, end, beg;
+  double dlogx1, llogx1, logx1, logx1c;
+  int i; 
+
+  end = log10(g_domEnd[IDIR]);
+  beg = log10(g_domBeg[IDIR]);
+
+  llogx1 = end - beg;
+  dlogx1 = llogx1 / NX1;
+
+  logx1 = log10(x1);
+  //logx1c = logx1 + 0.5 * dlogx1;
+
+  ratio = (logx1 - beg) / llogx1;
+  i = ratio * NX1 + IBEG;
+
+  g[IDIR] = di.g[i];
   g[JDIR] = 0.0;
   g[KDIR] = 0.0;
 }
@@ -405,6 +441,22 @@ double BodyForcePotential(double x1, double x2, double x3)
  *
  *********************************************************************** */
 {
-  return 0.0;
+  double ratio, end, beg;
+  double dlogx1, llogx1, logx1, logx1c;
+  int i; 
+
+  end = log10(g_domEnd[IDIR]);
+  beg = log10(g_domBeg[IDIR]);
+
+  llogx1 = end - beg;
+  dlogx1 = llogx1 / NX1;
+
+  logx1 = log10(x1);
+  logx1c = logx1 + 0.5 * dlogx1;
+
+  ratio = (logx1c - beg) / llogx1;
+  i = ratio * NX1 + IBEG;
+
+ return di.psi[i];
 }
 #endif

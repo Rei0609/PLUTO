@@ -1,7 +1,7 @@
 #define  PHYSICS                        HD
 #define  DIMENSIONS                     1
 #define  GEOMETRY                       SPHERICAL
-#define  BODY_FORCE                     NO
+#define  BODY_FORCE                     VECTOR
 #define  COOLING                        NO
 #define  RECONSTRUCTION                 PARABOLIC
 #define  TIME_STEPPING                  RK3
