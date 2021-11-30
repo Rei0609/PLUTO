@@ -315,12 +315,21 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
   if (side == X1_BEG){  /* -- X1_BEG boundary -- */
     if (box->vpos == CENTER) {
       BOX_LOOP(box,k,j,i){ 
+	#if START_MODE == START_MODE_WIND
 	  d->Vc[RHO][k][j][i] = agn.rho;
 	  d->Vc[VX1][k][j][i] = agn.speed;
-	  d->Vc[VX2][k][j][i] = 0;
-	  d->Vc[VX3][k][j][i] = 0;
+	  d->Vc[VX2][k][j][i] = 0.;
+	  d->Vc[VX3][k][j][i] = 0.;
 	  d->Vc[PRS][k][j][i] = agn.prs;
 	  d->Vc[TRC][k][j][i] = 1.;
+	#elif START_MODE == START_MODE_HALO
+	  d->Vc[RHO][k][j][i] = hot.rho[i];
+	  d->Vc[VX1][k][j][i] = 0.;
+	  d->Vc[VX2][k][j][i] = 0.;
+	  d->Vc[VX3][k][j][i] = 0.;
+	  d->Vc[PRS][k][j][i] = hot.prs[i];
+	  d->Vc[TRC][k][j][i] = 0.;
+        #endif
       }
     }else if (box->vpos == X1FACE){
       BOX_LOOP(box,k,j,i){  }
@@ -333,7 +342,14 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
 
   if (side == X1_END){  /* -- X1_END boundary -- */
     if (box->vpos == CENTER) {
-      BOX_LOOP(box,k,j,i){  }
+      BOX_LOOP(box,k,j,i){ 
+	  d->Vc[RHO][k][j][i] = hot.rho[i];
+	  d->Vc[VX1][k][j][i] = 0.;
+	  d->Vc[VX2][k][j][i] = 0.;
+	  d->Vc[VX3][k][j][i] = 0.;
+	  d->Vc[PRS][k][j][i] = hot.prs[i];
+	  d->Vc[TRC][k][j][i] = 0.;
+      }
     }else if (box->vpos == X1FACE){
       BOX_LOOP(box,k,j,i){  }
     }else if (box->vpos == X2FACE){
@@ -424,7 +440,7 @@ void BodyForceVector(double *v, double *g, double x1, double x2, double x3)
   ratio = (logx1 - beg) / llogx1;
   i = ratio * NX1 + IBEG;
 
-  g[IDIR] = di.g[i];
+  g[IDIR] = -1.0 * di.g[i];
   g[JDIR] = 0.0;
   g[KDIR] = 0.0;
 }
