@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CLionExternalBuildManager">
+    <target id="a4f1a84a-0b65-4c3b-aaf6-37d4aff26d2a" name="pluto" defaultType="MAKE">
+      <configuration id="5ae5f23d-c652-4b84-8143-39e1cca6aac7" name="pluto" toolchainName="Default">
+        <build type="MAKE">
+          <make targetName="pluto" />
+        </build>
+        <clean type="MAKE">
+          <make targetName="clean" />
+        </clean>
+      </configuration>
+    </target>
+  </component>
+</project>

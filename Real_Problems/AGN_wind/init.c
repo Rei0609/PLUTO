@@ -29,6 +29,8 @@ AGN agn;
 typedef struct {
     double *rho;
     double *prs;
+    double *pq_sin;
+    double *pq_shell;
 } HOT_HALO;
 HOT_HALO hot;
 
@@ -212,10 +214,13 @@ void InitDomain (Data *d, Grid *grid)
   y[1] = 0.;
 
   double tratio, te;
-
+  double a, lambda;
+  double b, c, u;
 
   hot.rho = ARRAY_1D(NX1_TOT, double);
   hot.prs = ARRAY_1D(NX1_TOT, double);
+  hot.pq_sin = ARRAY_1D(NX1_TOT, double);
+  hot.pq_shell = ARRAY_1D(NX1_TOT, double);
   di.psi = ARRAY_1D(NX1_TOT, double);
   di.g = ARRAY_1D(NX1_TOT, double);
 
@@ -229,19 +234,46 @@ void InitDomain (Data *d, Grid *grid)
     di.g[i] = y[1] * sigma_d * sigma_d; 
     tratio = g_inputParam[PAR_TVIR] / g_inputParam[PAR_THOT];
     te = g_inputParam[PAR_THOT] / KELVIN;
+
     hot.rho[i] = g_inputParam[PAR_NHOT] * exp(-tratio * y[0]);
     hot.prs[i] = hot.rho[i] * te / 0.6063;
   }
   print ("> Done\n");
+
+
  
+  double shell;
 
   /* Fill grid data arrays with calculated profile */
   DOM_LOOP(k, j, i) {
 
-    d->Vc[RHO][k][j][i] = hot.rho[i];
-    d->Vc[PRS][k][j][i] = hot.prs[i];
 
-  }
+              d->Vc[RHO][k][j][i] = hot.rho[i];
+
+#if PERT_MODE == PERT_MODE_SHELL
+              /* Induce a shell-like perturbation in density */
+
+              b = 3.;
+              c = 0.1 * g_inputParam[PAR_RBAR];
+              c = log(2) / ( c * c);
+              u = 1 * g_inputParam[PAR_RBAR];
+              shell = b * exp(-(x1[i] - u) * (x1[i] - u) * c);
+              d->Vc[RHO][k][j][i] = hot.rho[i] * (1. + shell);
+
+#elif PERT_MODE == PERT_MODE_WAVE
+              /* Induce a wave-like perturbation in velocity */
+
+              a = 1. * sqrt(g_gamma * CONST_kB * g_inputParam[PAR_THOT]  / (CONST_amu * 0.6063)) / UNIT_VELOCITY;
+              lambda = 2 * g_inputParam[PAR_RBAR];
+              d->Vc[VX1][k][j][i] = a * sin(2 * CONST_PI * log10(x1[i]) / lambda);
+
+
+#endif
+
+              d->Vc[PRS][k][j][i] = hot.prs[i];
+              
+
+          }
 
 }
 
@@ -303,6 +335,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
 {
   int   i, j, k, nv;
   double  *x1, *x2, *x3;
+  double  a, w, t;
 
   x1 = grid->x[IDIR];
   x2 = grid->x[JDIR];
@@ -349,6 +382,14 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
 	  d->Vc[VX3][k][j][i] = 0.;
 	  d->Vc[PRS][k][j][i] = hot.prs[i];
 	  d->Vc[TRC][k][j][i] = 0.;
+     #if PERT_MODE == PERT_MODE_TAIL
+      a = 1. * sqrt(g_gamma * CONST_kB * g_inputParam[PAR_THOT]  / (CONST_amu * 0.6063)) / UNIT_VELOCITY;
+      t = 500 * 3.15569252e10 * UNIT_VELOCITY / UNIT_LENGTH;
+      w = 2 * CONST_PI / t;
+//      d->Vc[RHO][k][j][i] = hot.rho[i] * (1 + a * sin(w * g_time));
+//      d->Vc[PRS][k][j][i] = hot.prs[i] * (1 + a * sin(w * g_time));
+      d->Vc[VX1][k][j][i] = a * sin(w * g_time);
+     #endif
       }
     }else if (box->vpos == X1FACE){
       BOX_LOOP(box,k,j,i){  }
