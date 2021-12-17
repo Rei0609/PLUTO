@@ -165,6 +165,14 @@ public:
      computed.
    */
   virtual int numFluxes();
+//
+//    /// Interval of fluxes
+//    /**
+//       Return the interval of flux variables.  This can be greater than the number
+//       of conserved variables if addition fluxes/face-centered quantities are
+//       computed.
+//     */
+//  virtual Interval * intvFluxes();
 
   /// Is the object completely defined
   /**

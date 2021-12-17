@@ -220,7 +220,7 @@ void PatchPluto::setGrid(const Box&  a_box, Grid *grid, FArrayBox& a_dV)
     #if GEOMETRY == POLAR || GEOMETRY == CYLINDRICAL
     dV[1][k][j][i] = grid->x[IDIR][i];
     #else
-    dV[1][k][j][i] = DIM_EXPAND(grid->x[IDIR][i], *sin(grid->x[JDIR][j], *1.0);
+    dV[1][k][j][i] = DIM_EXPAND(grid->x[IDIR][i], *sin(grid->x[JDIR][j]), *1.0);
     #endif
     #endif
   }}}

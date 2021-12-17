@@ -1,9 +1,9 @@
 #define  PHYSICS                        HD
 #define  DIMENSIONS                     1
 #define  GEOMETRY                       SPHERICAL
-#define  BODY_FORCE                     VECTOR
+#define  BODY_FORCE                     NO
 #define  COOLING                        NO
-#define  RECONSTRUCTION                 PARABOLIC
+#define  RECONSTRUCTION                 LINEAR
 #define  TIME_STEPPING                  RK2
 #define  NTRACER                        1
 #define  PARTICLES                      NO
@@ -32,16 +32,17 @@
 
 /* [Beg] user-defined constants (do not change this line) */
 
+#define  CHOMBO_LOGR                    YES
 #define  UNIT_DENSITY                   (0.6036*CONST_amu)
 #define  UNIT_VELOCITY                  CONST_c
 #define  UNIT_LENGTH                    (1000.*CONST_pc)
 #define  START_MODE_WIND                0
 #define  START_MODE_HALO                1
-#define  START_MODE                     START_MODE_HALO
+#define  START_MODE                     START_MODE_WIND
 #define  PERT_MODE_NONE                 0
 #define  PERT_MODE_SHELL                1
 #define  PERT_MODE_WAVE                 2
 #define  PERT_MODE_TAIL                 3
-#define  PERT_MODE                      PERT_MODE_SHELL
+#define  PERT_MODE                      PERT_MODE_NONE
 
 /* [End] user-defined constants (do not change this line) */

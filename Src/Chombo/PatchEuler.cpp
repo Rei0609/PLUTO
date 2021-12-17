@@ -151,9 +151,12 @@ void PatchPluto::advanceStep(FArrayBox&       a_U,
 
 // ----------------------------------------------------
 // 2. Advance (predictor or corrector) 
-// ---------------------------------------------------- 
+// ----------------------------------------------------
 
-  a_F.resize(UBox,numFluxes());
+// AYW -- resize was commented out in FluxBox.cpp
+//  a_F.size(UBox, Interval(0, numFluxes()));
+  a_F.resize(UBox, numFluxes());
+//  -- AYW
   a_F.setVal(0.0);
 
   static double *aflux[3];

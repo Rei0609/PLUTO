@@ -11,7 +11,7 @@ PLUTO_DIR    =
 SRC          = $(PLUTO_DIR)/Src
 
 include $(PLUTO_DIR)/Config/$(ARCH)
-include make.vars
+include make.vars.debug
 INCLUDE_DIRS  = -I. -I$(SRC) -I$(SRC)/Chombo  
 INCLUDE_DIRS += -I$(CHOMBO_HOME)/src/AMRTimeDependent 
 INCLUDE_DIRS += -I$(CHOMBO_HOME)/src/AMRTools 

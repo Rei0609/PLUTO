@@ -29,6 +29,7 @@ AGN agn;
 typedef struct {
     double *rho;
     double *prs;
+    double *r;
     double *pq_sin;
     double *pq_shell;
 } HOT_HALO;
@@ -37,6 +38,7 @@ HOT_HALO hot;
 typedef struct {
     double *psi;
     double *g;
+    double *r;
 } DOUBLE_ISOTHERMAL;
 DOUBLE_ISOTHERMAL di;
 
@@ -219,10 +221,12 @@ void InitDomain (Data *d, Grid *grid)
 
   hot.rho = ARRAY_1D(NX1_TOT, double);
   hot.prs = ARRAY_1D(NX1_TOT, double);
+  hot.r = ARRAY_1D(NX1_TOT, double);
   hot.pq_sin = ARRAY_1D(NX1_TOT, double);
   hot.pq_shell = ARRAY_1D(NX1_TOT, double);
   di.psi = ARRAY_1D(NX1_TOT, double);
   di.g = ARRAY_1D(NX1_TOT, double);
+  di.r = ARRAY_1D(NX1_TOT, double);
 
   /* Solve the 1D radial Poisson equation to obtain profiles of the 
    * potential, density, and pressure.
@@ -231,12 +235,14 @@ void InitDomain (Data *d, Grid *grid)
   ITOT_LOOP(i) {
     ODE_Solve(y, nvar, dx1_min*1.e-3/rd, x1[i]/rd, 0.2*dx1_min/rd, rhs, ODE_RK4);
     //di.psi[i] = y[0] * sigma_d * sigma_d;
-    di.g[i] = y[1] * sigma_d * sigma_d; 
+    di.g[i] = y[1] * sigma_d * sigma_d;
+    di.r[i] = x1[i];
     tratio = g_inputParam[PAR_TVIR] / g_inputParam[PAR_THOT];
     te = g_inputParam[PAR_THOT] / KELVIN;
 
     hot.rho[i] = g_inputParam[PAR_NHOT] * exp(-tratio * y[0]);
     hot.prs[i] = hot.rho[i] * te / 0.6063;
+    hot.r[i] = x1[i];
   }
   print ("> Done\n");
 
@@ -465,7 +471,7 @@ void BodyForceVector(double *v, double *g, double x1, double x2, double x3)
  *
  *********************************************************************** */
 {
-  double ratio, end, beg;
+  double ratio, ratio2, end, beg, g_r;
   double dlogx1, llogx1, logx1, logx1c;
   int i; 
 
@@ -476,12 +482,15 @@ void BodyForceVector(double *v, double *g, double x1, double x2, double x3)
   dlogx1 = llogx1 / NX1;
 
   logx1 = log10(x1);
-  //logx1c = logx1 + 0.5 * dlogx1;
+  logx1c = logx1 - 0.5 * dlogx1;
 
-  ratio = (logx1 - beg) / llogx1;
+  ratio = (logx1c - beg) / llogx1;
   i = ratio * NX1 + IBEG;
 
-  g[IDIR] = -1.0 * di.g[i];
+  ratio2 = (logx1 - di.r[i]) / dlogx1;
+  g_r = di.g[i] + ratio2 * (di.g[i+1] - di.g[i]);
+
+  g[IDIR] = -1.0 * g_r;
   g[JDIR] = 0.0;
   g[KDIR] = 0.0;
 }
