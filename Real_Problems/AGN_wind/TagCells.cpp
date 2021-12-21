@@ -236,8 +236,8 @@ void PatchPluto::computeRefGradient(FArrayBox& gFab, FArrayBox& UFab,
     gr2  = DIM_EXPAND(d2qx*d2qx,   + d2qy*d2qy,   + d2qz*d2qz);
     gr2 /= DIM_EXPAND(den_x*den_x, + den_y*den_y, + den_z*den_z);
 
-    grad[k][j][i] = sqrt(gr2);
-//    grad[k][j][i] = 0;
+//    grad[k][j][i] = sqrt(gr2);
+    grad[k][j][i] = 0;
 #endif
   }
 

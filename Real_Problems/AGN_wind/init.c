@@ -30,8 +30,10 @@ typedef struct {
     double *rho;
     double *prs;
     double *r;
+    double *logr;
     double *pq_sin;
     double *pq_shell;
+    int nr;
 } HOT_HALO;
 HOT_HALO hot;
 
@@ -39,6 +41,8 @@ typedef struct {
     double *psi;
     double *g;
     double *r;
+    double *logr;
+    int nr;
 } DOUBLE_ISOTHERMAL;
 DOUBLE_ISOTHERMAL di;
 
@@ -66,6 +70,29 @@ void rhs_poisson(double x, double *y, double *f) {
 
 }
 
+double interpolate_1D(double r, double *rarr, double *varr, int nr) {
+    double ratio, ratio2, end, beg;
+    double dr, lr, rc;
+    int i;
+
+    end = rarr[nr-1];
+    beg = rarr[0];
+
+    lr = end - beg;
+    dr = lr / (nr - 1);
+    lr += dr;
+    beg -= 0.5 * dr;
+    end += 0.5 * dr;
+
+    rc = r - 0.5 * dr;
+
+    ratio = (rc - beg) / lr;
+    i = (int) (ratio * nr);
+
+    ratio2 = (r - rarr[i]) / dr;
+
+    return varr[i] + ratio2 * (varr[i+1] - varr[i]);
+}
 
 /* ********************************************************************* */
 void Init (double *v, double x1, double x2, double x3)
@@ -222,11 +249,13 @@ void InitDomain (Data *d, Grid *grid)
   hot.rho = ARRAY_1D(NX1_TOT, double);
   hot.prs = ARRAY_1D(NX1_TOT, double);
   hot.r = ARRAY_1D(NX1_TOT, double);
+  hot.logr = ARRAY_1D(NX1_TOT, double);
   hot.pq_sin = ARRAY_1D(NX1_TOT, double);
   hot.pq_shell = ARRAY_1D(NX1_TOT, double);
   di.psi = ARRAY_1D(NX1_TOT, double);
   di.g = ARRAY_1D(NX1_TOT, double);
   di.r = ARRAY_1D(NX1_TOT, double);
+  di.logr = ARRAY_1D(NX1_TOT, double);
 
   /* Solve the 1D radial Poisson equation to obtain profiles of the 
    * potential, density, and pressure.
@@ -237,24 +266,32 @@ void InitDomain (Data *d, Grid *grid)
     //di.psi[i] = y[0] * sigma_d * sigma_d;
     di.g[i] = y[1] * sigma_d * sigma_d;
     di.r[i] = x1[i];
+    di.logr[i] = log10(x1[i]);
     tratio = g_inputParam[PAR_TVIR] / g_inputParam[PAR_THOT];
     te = g_inputParam[PAR_THOT] / KELVIN;
 
     hot.rho[i] = g_inputParam[PAR_NHOT] * exp(-tratio * y[0]);
     hot.prs[i] = hot.rho[i] * te / 0.6063;
     hot.r[i] = x1[i];
+    hot.logr[i] = log10(x1[i]);
   }
+  hot.nr = i;
+  di.nr = i;
   print ("> Done\n");
 
 
  
   double shell;
+  double rho_r, prs_r, r_id;
+  r_id = x1[i];
+
 
   /* Fill grid data arrays with calculated profile */
   DOM_LOOP(k, j, i) {
 
-
-              d->Vc[RHO][k][j][i] = hot.rho[i];
+             //rho_r = interpolate_1D(log10(r_id), hot.logr, hot.rho, hot.nr);
+//             d->Vc[RHO][k][j][i] = rho_r;
+             d->Vc[RHO][k][j][i] = hot.rho[i];
 
 #if PERT_MODE == PERT_MODE_SHELL
               /* Induce a shell-like perturbation in density */
@@ -475,20 +512,7 @@ void BodyForceVector(double *v, double *g, double x1, double x2, double x3)
   double dlogx1, llogx1, logx1, logx1c;
   int i; 
 
-  end = log10(g_domEnd[IDIR]);
-  beg = log10(g_domBeg[IDIR]);
-
-  llogx1 = end - beg;
-  dlogx1 = llogx1 / NX1;
-
-  logx1 = log10(x1);
-  logx1c = logx1 - 0.5 * dlogx1;
-
-  ratio = (logx1c - beg) / llogx1;
-  i = ratio * NX1 + IBEG;
-
-  ratio2 = (logx1 - di.r[i]) / dlogx1;
-  g_r = di.g[i] + ratio2 * (di.g[i+1] - di.g[i]);
+  g_r = interpolate_1D(log10(x1), di.logr, di.g, di.nr);
 
   g[IDIR] = -1.0 * g_r;
   g[JDIR] = 0.0;
