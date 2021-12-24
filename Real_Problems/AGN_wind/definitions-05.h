@@ -3,7 +3,7 @@
 #define  GEOMETRY                       SPHERICAL
 #define  BODY_FORCE                     VECTOR
 #define  COOLING                        NO
-#define  RECONSTRUCTION                 PARABOLIC
+#define  RECONSTRUCTION                 LINEAR
 #define  TIME_STEPPING                  RK2
 #define  NTRACER                        1
 #define  PARTICLES                      NO
@@ -33,7 +33,7 @@
 /* [Beg] user-defined constants (do not change this line) */
 
 #define  CHOMBO_LOGR                    YES
-#define  REF_CRIT                       2
+#define  REF_CRIT                       1
 #define  UNIT_DENSITY                   (0.6036*CONST_amu)
 #define  UNIT_VELOCITY                  CONST_c
 #define  UNIT_LENGTH                    (1000.*CONST_pc)

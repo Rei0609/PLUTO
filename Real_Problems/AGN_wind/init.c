@@ -163,9 +163,10 @@ void InitDomain (Data *d, Grid *grid)
 {
 
 
-  double r, q, r_in;
+  double  q, r_in;
   double mach, power, speed, area;
   double rho0, vx1, vx2, vx3, prs0;
+  static int profile_once = 0;
 
   /* Input parameters */
   mach = g_inputParam[PAR_MACH];
@@ -217,81 +218,99 @@ void InitDomain (Data *d, Grid *grid)
   //x3 = grid->x[KDIR];
   
   /* Define rd */
-  double rd, rb;
-  double sigma_d, l, kappa; 
-  sigma_d = sqrt(g_inputParam[PAR_TVIR] * CONST_kB / CONST_mp) / (UNIT_VELOCITY);
-  rb = g_inputParam[PAR_RBAR];
-  //rd = 4 * CONST_PI * CONST_G * rho_d;
-  //rd = 9 * sigma_d * sigma_d / rd;
-  //rd = sqrt(rd);
-  kappa = g_inputParam[PAR_KAPPA];
-  l = g_inputParam[PAR_LAMBDA];
-  rd = l * rb; 
+  if (profile_once == 0) {
+      double rd, rb;
+      double sigma_d, l, kappa;
+      sigma_d = sqrt(g_inputParam[PAR_TVIR] * CONST_kB / CONST_mp) / (UNIT_VELOCITY);
+      rb = g_inputParam[PAR_RBAR];
+      //rd = 4 * CONST_PI * CONST_G * rho_d;
+      //rd = 9 * sigma_d * sigma_d / rd;
+      //rd = sqrt(rd);
+      kappa = g_inputParam[PAR_KAPPA];
+      l = g_inputParam[PAR_LAMBDA];
+      rd = l * rb;
 
+      /* We need the profile over the whole domain */
+      int nx1_int_glob;
+      double delta_xi;
+      double r_beg_ode, r_end_ode, delta_xi_ode, dx1_min_ode;
+      int nstep_ode = 128;
 
-  /* Find minimum dx1 */
-  double dx1_min = 1.e30;
-  double *dx1, *dx2, *dx3;
-  dx1 = grid->dx[IDIR];
-  ITOT_LOOP(i) dx1_min = MIN(dx1_min, dx1[i]);
+      nx1_int_glob = grid->np_int_glob[IDIR];
+      delta_xi = log10(g_domEnd[IDIR] / g_domBeg[IDIR]) / nx1_int_glob;
+      r_beg_ode = pow(10, log10(g_domBeg[IDIR]) - grid->nghost[IDIR] * delta_xi);
+      r_end_ode = pow(10, log10(g_domEnd[IDIR]) + grid->nghost[IDIR] * delta_xi);
+      delta_xi_ode = log10(r_end_ode / r_beg_ode) / nstep_ode;
+      dx1_min_ode = r_beg_ode * (pow(10, delta_xi_ode) - 1);
 
-  /* Initial condition and solution to potential.
-   * y[0] is the potential, and y[1] the force. */
-  double nvar, y[2];
-  nvar = 2;
-  y[0] = 0.;
-  y[1] = 0.;
+      /* Initial condition and solution to potential.
+       * y[0] is the potential, and y[1] the force. */
+      double nvar, y[2];
+      nvar = 2;
+      y[0] = 0.;
+      y[1] = 0.;
 
-  double tratio, te;
-  double a, lambda;
-  double b, c, u;
+      double tratio, te;
+      double a, lambda;
+      double b, c, u;
 
-  hot.rho = ARRAY_1D(NX1_TOT, double);
-  hot.prs = ARRAY_1D(NX1_TOT, double);
-  hot.r = ARRAY_1D(NX1_TOT, double);
-  hot.logr = ARRAY_1D(NX1_TOT, double);
-  hot.pq_sin = ARRAY_1D(NX1_TOT, double);
-  hot.pq_shell = ARRAY_1D(NX1_TOT, double);
-  di.psi = ARRAY_1D(NX1_TOT, double);
-  di.g = ARRAY_1D(NX1_TOT, double);
-  di.r = ARRAY_1D(NX1_TOT, double);
-  di.logr = ARRAY_1D(NX1_TOT, double);
+      hot.rho = ARRAY_1D(nstep_ode, double);
+      hot.prs = ARRAY_1D(nstep_ode, double);
+      hot.r = ARRAY_1D(nstep_ode, double);
+      hot.logr = ARRAY_1D(nstep_ode, double);
+      hot.pq_sin = ARRAY_1D(nstep_ode, double);
+      hot.pq_shell = ARRAY_1D(nstep_ode, double);
+      di.psi = ARRAY_1D(nstep_ode, double);
+      di.g = ARRAY_1D(nstep_ode, double);
+      di.r = ARRAY_1D(nstep_ode, double);
+      di.logr = ARRAY_1D(nstep_ode, double);
 
-  /* Solve the 1D radial Poisson equation to obtain profiles of the 
-   * potential, density, and pressure.
-   * We also want the values in the boundaries */
-  print ("> Starting setup of gravitational potential... \n");  
-  ITOT_LOOP(i) {
-    ODE_Solve(y, nvar, dx1_min*1.e-3/rd, x1[i]/rd, 0.2*dx1_min/rd, rhs, ODE_RK4);
-    //di.psi[i] = y[0] * sigma_d * sigma_d;
-    di.g[i] = y[1] * sigma_d * sigma_d;
-    di.r[i] = x1[i];
-    di.logr[i] = log10(x1[i]);
-    tratio = g_inputParam[PAR_TVIR] / g_inputParam[PAR_THOT];
-    te = g_inputParam[PAR_THOT] / KELVIN;
+      /* Solve the 1D radial Poisson equation to obtain profiles of the
+       * potential, density, and pressure.
+       * We also want the values in the boundaries */
+      print("> Starting setup of gravitational potential... \n");
 
-    hot.rho[i] = g_inputParam[PAR_NHOT] * exp(-tratio * y[0]);
-    hot.prs[i] = hot.rho[i] * te / 0.6063;
-    hot.r[i] = x1[i];
-    hot.logr[i] = log10(x1[i]);
+      double r, dx1;
+      dx1 = dx1_min_ode;
+      r = r_beg_ode;
+      for (i = 0; i < nstep_ode; i++){
+
+          r +=  0.5 * dx1;
+
+          ODE_Solve(y, nvar, dx1_min_ode * 1.e-3 / rd, r / rd, 0.2 * dx1_min_ode / rd, rhs, ODE_RK4);
+          //di.psi[i] = y[0] * sigma_d * sigma_d;
+          di.g[i] = y[1] * sigma_d * sigma_d;
+          di.r[i] = r;
+          di.logr[i] = log10(r);
+          tratio = g_inputParam[PAR_TVIR] / g_inputParam[PAR_THOT];
+          te = g_inputParam[PAR_THOT] / KELVIN;
+
+          hot.rho[i] = g_inputParam[PAR_NHOT] * exp(-tratio * y[0]);
+          hot.prs[i] = hot.rho[i] * te / 0.6063;
+          hot.r[i] = r;
+          hot.logr[i] = log10(r);
+
+          r += 0.5 * dx1;
+          dx1 = r * (pow(10, delta_xi_ode) - 1);
+
+      }
+      hot.nr = nstep_ode;
+      di.nr = nstep_ode;
+      print("> Done\n");
+
+      profile_once = 1;
   }
-  hot.nr = i;
-  di.nr = i;
-  print ("> Done\n");
-
 
  
   double shell;
-  double rho_r, prs_r, r_id;
-  r_id = x1[i];
+  double rho_r, prs_r;
 
 
   /* Fill grid data arrays with calculated profile */
   DOM_LOOP(k, j, i) {
 
-             //rho_r = interpolate_1D(log10(r_id), hot.logr, hot.rho, hot.nr);
-//             d->Vc[RHO][k][j][i] = rho_r;
-             d->Vc[RHO][k][j][i] = hot.rho[i];
+             rho_r = interpolate_1D(log10(x1[i]), hot.logr, hot.rho, hot.nr);
+             d->Vc[RHO][k][j][i] = rho_r;
 
 #if PERT_MODE == PERT_MODE_SHELL
               /* Induce a shell-like perturbation in density */
@@ -313,7 +332,8 @@ void InitDomain (Data *d, Grid *grid)
 
 #endif
 
-              d->Vc[PRS][k][j][i] = hot.prs[i];
+              prs_r = interpolate_1D(log10(x1[i]), hot.logr, hot.prs, hot.nr);
+              d->Vc[PRS][k][j][i] = prs_r;
               
 
           }
@@ -416,14 +436,18 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     }
   }
 
+  double rho_r, prs_r;
+
   if (side == X1_END){  /* -- X1_END boundary -- */
     if (box->vpos == CENTER) {
-      BOX_LOOP(box,k,j,i){ 
-	  d->Vc[RHO][k][j][i] = hot.rho[i];
+      BOX_LOOP(box,k,j,i){
+          rho_r = interpolate_1D(log10(x1[i]), hot.logr, hot.rho, hot.nr);
+	  d->Vc[RHO][k][j][i] = rho_r;
 	  d->Vc[VX1][k][j][i] = 0.;
 	  d->Vc[VX2][k][j][i] = 0.;
 	  d->Vc[VX3][k][j][i] = 0.;
-	  d->Vc[PRS][k][j][i] = hot.prs[i];
+          prs_r = interpolate_1D(log10(x1[i]), hot.logr, hot.prs, hot.nr);
+	  d->Vc[PRS][k][j][i] = prs_r;
 	  d->Vc[TRC][k][j][i] = 0.;
      #if PERT_MODE == PERT_MODE_TAIL
       a = 1. * sqrt(g_gamma * CONST_kB * g_inputParam[PAR_THOT]  / (CONST_amu * 0.6063)) / UNIT_VELOCITY;
