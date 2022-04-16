@@ -13,6 +13,31 @@
 /* ///////////////////////////////////////////////////////////////////// */
 #include "pluto.h"
 
+typedef struct {
+    double power;
+    double mach;
+    double speed;
+    double radius;
+    double area;
+    double rho;
+    double prs;
+} AGN;
+AGN agn;
+
+typedef struct {
+    double nhot;
+    double Thot;
+    double nwarm;
+    double Twarm;
+    double rwarm;
+    double sigma;
+    double Tcrit;
+    double te;
+} ISM;
+ISM ism;
+
+
+
 /* ********************************************************************* */
 void Init (double *v, double x1, double x2, double x3)
 /*! 
@@ -41,14 +66,74 @@ void Init (double *v, double x1, double x2, double x3)
  *
  *********************************************************************** */
 {
-  v[RHO] = 1.0;
+    //　AGN initial condition //
+    double mach, power, speed, area;
+    double rho0, prs0, r_in, q;
+    double te;
+    static int agn_once = 0;
+
+    if (! agn_once) {
+        /* Input parameters */
+        mach = g_inputParam[PAR_MACH];
+        power = g_inputParam[PAR_POWER];
+        speed = g_inputParam[PAR_SPEED];
+
+        /* Normalize to code units */
+        power /= UNIT_VELOCITY * UNIT_VELOCITY * UNIT_VELOCITY *
+                 UNIT_DENSITY * UNIT_LENGTH * UNIT_LENGTH;
+
+        r_in = g_inputParam[PAR_RADIUS];
+
+        /* Flux through surface */
+        area = CONST_PI * r_in * r_in;
+
+        /* Primitive variables from input parameters */
+        q = (g_gamma - 1.) * mach * mach;
+        q = 1. + 2. / q;
+
+        /* Init density and pressure of AGN */
+        rho0 = 2. * power / (speed * speed * speed * area * q);
+        prs0 = (2. * power / speed - rho0 * speed * speed * area) *
+               (g_gamma - 1.) / (2. * g_gamma * area);
+
+        agn.power = power;
+        agn.mach = mach;
+        agn.speed = speed;
+        agn.radius = r_in;
+        agn.area = area;
+        agn.rho = rho0;
+        agn.prs = prs0;
+
+        agn_once = 1;
+    }
+
+    // calculation area initial condition //
+    double r_w, n_w;
+    double n_h, T_h;
+    double sigma, T_c;
+    static int ism_once = 0;
+
+    if (! ism_once) {
+
+        ism.rwarm = g_inputParam[PAR_RADIUS_W];
+        ism.nwarm = g_inputParam[PAR_RHOW];
+        ism.nhot = g_inputParam[PAR_RHOH];
+        ism.Thot = g_inputParam[PAR_THOT];
+        ism.sigma = g_inputParam[PAR_SIGMA];
+        ism.Tcrit = g_inputParam[PAR_TCRIT];
+        ism.te = g_inputParam[PAR_THOT] / KELVIN;
+
+        ism_once = 1;
+    }
+
+
+  v[RHO] = g_inputParam[PAR_RHOH];
   v[VX1] = 0.0;
   v[VX2] = 0.0;
   v[VX3] = 0.0;
-  #if HAVE_ENERGY
-  v[PRS] = 1.0;
-  #endif
+  v[PRS] = v[RHO] * ism.te /0.6063;
   v[TRC] = 0.0;
+  v[TRC+1] = 0.0;
 
   #if PHYSICS == MHD || PHYSICS == RMHD
   v[BX1] = 0.0;
@@ -72,6 +157,50 @@ void InitDomain (Data *d, Grid *grid)
  *
  *********************************************************************** */
 {
+    int i, j, k;
+    int id, size[3];
+    double r, f_exp, f1, f2, nc, T_w;
+    long int offset, offset1;
+    double *x1 = grid->x[IDIR];
+    double *x2 = grid->x[JDIR];
+    double *x3 = grid->x[KDIR];
+//    double *x1r = grid->xr[IDIR];
+//    double *x2r = grid->xr[JDIR];
+//    double *x3r = grid->xr[KDIR];
+
+    /* Interpolate density */
+    id = InputDataOpen("input-rho.flt", "grid_in.out", " ", 0, CENTER);
+
+    InputDataGridSize (id, size);
+    offset = (long) size[0] * (long) size[1] * (long) size[2];
+
+    /* Smooth cloud region */
+    TOT_LOOP(k, j, i) {
+
+                /* Get fractal cube */
+                nc = InputDataInterpolate(id, x1[i], x2[j], x3[k]);
+
+                /* Apodize with tapered profile */
+                r = DIM_EXPAND(x1[i] * x1[i], + x2[j] * x2[j], + x3[k] * x3[k]);
+                r = sqrt(r);
+                f_exp = exp((r - ism.rwarm) / ism.sigma);
+                f1 = 1. - f_exp;
+                f2 = f_exp;
+                nc *= f1 * ism.nwarm + f2 * ism.nhot;
+
+                /* Apply critical temperature criterion */
+                T_w = ism.nhot / nc * ism.Thot;
+                nc = T_w > ism.Tcrit ? ism.nhot : nc;
+
+                d->Vc[RHO][k][j][i] = nc;
+                d->Vc[PRS][k][j][i] = nc * ism.te / 0.6063;
+    }
+
+    InputDataClose(id);
+
+
+
+
 }
 
 /* ********************************************************************* */

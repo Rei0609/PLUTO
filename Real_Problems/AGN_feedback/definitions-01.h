@@ -33,5 +33,8 @@
 
 /* [Beg] user-defined constants (do not change this line) */
 
+#define  UNIT_DENSITY                   (0.6036*CONST_amu)
+#define  UNIT_VELOCITY                  CONST_c
+#define  UNIT_LENGTH                    (1000*CONST_pc)
 
 /* [End] user-defined constants (do not change this line) */
