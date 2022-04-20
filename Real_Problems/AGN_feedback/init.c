@@ -258,20 +258,63 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
  *
  *********************************************************************** */
 {
-  int   i, j, k, nv;
+  int   i, j, k, r2, r3, nv;
   double  *x1, *x2, *x3;
 
   x1 = grid->x[IDIR];
   x2 = grid->x[JDIR];
   x3 = grid->x[KDIR];
 
+
   if (side == 0) {    /* -- check solution inside domain -- */
-    DOM_LOOP(k,j,i){}
+    TOT_LOOP(k,j,i){
+      #if START_MODE == START_MODE_AGN
+        r3 = sqrt(x1[i] * x1[i] + x2[j] * x2[j] + x3[k] * x3[k]);
+        if (r3 <= agn.radius){
+            d->Vc[RHO][k][j][i] = agn.rho;
+            d->Vc[PRS][k][j][i] = agn.prs;
+            d->Vc[VX1][k][j][i] = agn.speed;
+            d->Vc[VX2][k][j][i] = 0;
+            d->Vc[VX3][k][j][i] = 0;
+            d->Vc[TRC][k][j][i] = 1;
+            d->Vc[TRC+1][k][j][i] = 0;
+        }
+      #endif
+    }
   }
 
   if (side == X1_BEG){  /* -- X1_BEG boundary -- */
     if (box->vpos == CENTER) {
-      BOX_LOOP(box,k,j,i){  }
+      BOX_LOOP(box,k,j,i) {
+        #if START_MODE == START_MODE_AGN
+          r2 = sqrt(x2[j] * x2[j] + x3[k] * x3[k]);
+          if (r2 <= agn.radius) {
+              d->Vc[RHO][k][j][i] = agn.rho;
+              d->Vc[PRS][k][j][i] = agn.prs;
+              d->Vc[VX1][k][j][i] = agn.speed;
+              d->Vc[VX2][k][j][i] = 0;
+              d->Vc[VX3][k][j][i] = 0;
+              d->Vc[TRC][k][j][i] = 1;
+              d->Vc[TRC+1][k][j][i] = 0;
+          } else {
+              d->Vc[RHO][k][j][i] = d->Vc[RHO][k][-j][i];
+              d->Vc[PRS][k][j][i] = d->Vc[RHO][k][-j][i];
+              d->Vc[VX1][k][j][i] = 0;
+              d->Vc[VX2][k][j][i] = 0;
+              d->Vc[VX3][k][j][i] = 0;
+              d->Vc[TRC][k][j][i] = 0;
+              d->Vc[TRC+1][k][j][i] = 0;
+          }
+        #elif START_MODE == START_MODE_HALO
+              d->Vc[RHO][k][j][i] = d->Vc[RHO][k][-j][i];
+              d->Vc[PRS][k][j][i] = d->Vc[RHO][k][-j][i];
+              d->Vc[VX1][k][j][i] = 0;
+              d->Vc[VX2][k][j][i] = 0;
+              d->Vc[VX3][k][j][i] = 0;
+              d->Vc[TRC][k][j][i] = 0;
+              d->Vc[TRC+1][k][j][i] = 0;
+        #endif
+      }
     }else if (box->vpos == X1FACE){
       BOX_LOOP(box,k,j,i){  }
     }else if (box->vpos == X2FACE){
