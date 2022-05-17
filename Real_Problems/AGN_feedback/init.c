@@ -159,7 +159,7 @@ void InitDomain (Data *d, Grid *grid)
 {
     int i, j, k;
     int id, size[3];
-    double r, f_exp, f1, f2, nc, T_w;
+    double r, r3, f_exp, f1, f2, nc, T_w;
     long int offset, offset1;
     double *x1 = grid->x[IDIR];
     double *x2 = grid->x[JDIR];
@@ -192,8 +192,31 @@ void InitDomain (Data *d, Grid *grid)
                 T_w = ism.nhot / nc * ism.Thot;
                 nc = T_w > ism.Tcrit ? ism.nhot : nc;
 
+        #if START_MODE == START_MODE_HALO
+
                 d->Vc[RHO][k][j][i] = nc;
                 d->Vc[PRS][k][j][i] = nc * ism.te / 0.6063;
+                d->Vc[TRC][k][j][i] = 0;
+                d->Vc[TRC + 1][k][j][i] = 1;
+
+        #elif START_MODE == START_MODE_AGN
+
+                r3 = sqrt(x1[i] * x1[i] + x2[j] * x2[j] + x3[k] * x3[k]);
+
+                d->Vc[RHO][k][j][i] = nc;
+                d->Vc[PRS][k][j][i] = nc * ism.te / 0.6063;
+                d->Vc[TRC][k][j][i] = 0;
+                d->Vc[TRC + 1][k][j][i] = 1;
+
+            if (r3 <= agn.radius) {
+                d->Vc[RHO][k][j][i] = agn.rho;
+                d->Vc[PRS][k][j][i] = agn.prs;
+                d->Vc[VX1][k][j][i] = agn.speed;
+                d->Vc[TRC][k][j][i] = 1;
+                d->Vc[TRC + 1][k][j][i] = 0;
+            }
+
+        #endif
     }
 
     InputDataClose(id);
@@ -267,19 +290,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
 
 
   if (side == 0) {    /* -- check solution inside domain -- */
-    TOT_LOOP(k,j,i){
-      #if START_MODE == START_MODE_AGN
-        r3 = sqrt(x1[i] * x1[i] + x2[j] * x2[j] + x3[k] * x3[k]);
-        if (r3 <= agn.radius){
-            d->Vc[RHO][k][j][i] = agn.rho;
-            d->Vc[PRS][k][j][i] = agn.prs;
-            d->Vc[VX1][k][j][i] = agn.speed;
-            d->Vc[VX2][k][j][i] = 0;
-            d->Vc[VX3][k][j][i] = 0;
-            d->Vc[TRC][k][j][i] = 1;
-            d->Vc[TRC+1][k][j][i] = 0;
-        }
-      #endif
+      TOT_LOOP(k,j,i){
     }
   }
 
