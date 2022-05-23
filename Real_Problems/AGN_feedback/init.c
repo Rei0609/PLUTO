@@ -155,7 +155,7 @@ void InitDomain (Data *d, Grid *grid)
 {
     int i, j, k;
     int id, size[3];
-    double r, r3, f_exp, f1, f2, nc, T_w;
+    double r, r3, f_exp, f1, f2, f, nc, T_w;
     long int offset, offset1;
     double *x1 = grid->x[IDIR];
     double *x2 = grid->x[JDIR];
@@ -165,28 +165,31 @@ void InitDomain (Data *d, Grid *grid)
 //    double *x3r = grid->xr[KDIR];
 
     /* Interpolate density */
-//    id = InputDataOpen("input-rho.flt", "grid_in.out", " ", 0, CENTER);
+    id = InputDataOpen("input-rho.flt", "grid_in.out", " ", 0, CENTER);
 
-//    InputDataGridSize (id, size);
-//    offset = (long) size[0] * (long) size[1] * (long) size[2];
+    InputDataGridSize (id, size);
+    offset = (long) size[0] * (long) size[1] * (long) size[2];
 
     /* Smooth cloud region */
     TOT_LOOP(k, j, i) {
 
                 /* Get fractal cube */
-//                nc = InputDataInterpolate(id, x1[i], x2[j], x3[k]);
+                nc = InputDataInterpolate(id, x1[i], x2[j], x3[k]);
 
                 /* Apodize with tapered profile */
-//                r = DIM_EXPAND(x1[i] * x1[i], + x2[j] * x2[j], + x3[k] * x3[k]);
-//                r = sqrt(r);
+                r = DIM_EXPAND(x1[i] * x1[i], + x2[j] * x2[j], + x3[k] * x3[k]);
+                r = sqrt(r);
 //                f_exp = exp((r - ism.rwarm) / ism.sigma);
 //                f1 = 1. - f_exp;
 //                f2 = f_exp;
-//                nc *= f1 * ism.nwarm + f2 * ism.nhot;
+//                nc *= f1 * ism.nhot + f2 * ism.nwarm;
+                  f = 1 + exp(ism.sigma * (r - ism.rwarm));
+                  f = (ism.nwarm-ism.nhot) * 1/f + ism.nhot;
+                  nc *= f;
 
                 /* Apply critical temperature criterion */
-//                T_w = ism.nhot / nc * ism.Thot;
-//                nc = T_w > ism.Tcrit ? ism.nhot : nc;
+                T_w = ism.nhot / nc * ism.Thot;
+                nc = T_w > ism.Tcrit ? ism.nhot : nc;
 
         #if START_MODE == START_MODE_HALO
 
@@ -199,10 +202,10 @@ void InitDomain (Data *d, Grid *grid)
 
                 r3 = sqrt(x1[i] * x1[i] + x2[j] * x2[j] + x3[k] * x3[k]);
 
-//                d->Vc[RHO][k][j][i] = nc;
-//                d->Vc[PRS][k][j][i] = nc * ism.te / 0.6063;
-//                d->Vc[TRC][k][j][i] = 0;
-//                d->Vc[TRC + 1][k][j][i] = 1;
+                d->Vc[RHO][k][j][i] = nc;
+                d->Vc[PRS][k][j][i] = nc * ism.te / 0.6063;
+                d->Vc[TRC][k][j][i] = 0;
+                d->Vc[TRC + 1][k][j][i] = 1;
 
             if (r3 <= agn.radius) {
                 d->Vc[RHO][k][j][i] = agn.rho;
@@ -215,7 +218,7 @@ void InitDomain (Data *d, Grid *grid)
         #endif
     }
 
-//    InputDataClose(id);
+    InputDataClose(id);
 
 
 
