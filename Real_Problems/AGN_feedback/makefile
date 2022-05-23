@@ -6,7 +6,7 @@
 
 pluto:                              # Default target
 
-ARCH         = Linux.gcc.defs
+ARCH         = debug.defs
 PLUTO_DIR    = /Users/rei/dev/PLUTO
 SRC          = $(PLUTO_DIR)/Src
 INCLUDE_DIRS = -I. -I$(SRC)

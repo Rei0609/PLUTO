@@ -69,7 +69,6 @@ void Init (double *v, double x1, double x2, double x3)
     //　AGN initial condition //
     double mach, power, speed, area;
     double rho0, prs0, r_in, q;
-    double te;
     static int agn_once = 0;
 
     if (! agn_once) {
@@ -108,9 +107,6 @@ void Init (double *v, double x1, double x2, double x3)
     }
 
     // calculation area initial condition //
-    double r_w, n_w;
-    double n_h, T_h;
-    double sigma, T_c;
     static int ism_once = 0;
 
     if (! ism_once) {
@@ -169,28 +165,28 @@ void InitDomain (Data *d, Grid *grid)
 //    double *x3r = grid->xr[KDIR];
 
     /* Interpolate density */
-    id = InputDataOpen("input-rho.flt", "grid_in.out", " ", 0, CENTER);
+//    id = InputDataOpen("input-rho.flt", "grid_in.out", " ", 0, CENTER);
 
-    InputDataGridSize (id, size);
-    offset = (long) size[0] * (long) size[1] * (long) size[2];
+//    InputDataGridSize (id, size);
+//    offset = (long) size[0] * (long) size[1] * (long) size[2];
 
     /* Smooth cloud region */
     TOT_LOOP(k, j, i) {
 
                 /* Get fractal cube */
-                nc = InputDataInterpolate(id, x1[i], x2[j], x3[k]);
+//                nc = InputDataInterpolate(id, x1[i], x2[j], x3[k]);
 
                 /* Apodize with tapered profile */
-                r = DIM_EXPAND(x1[i] * x1[i], + x2[j] * x2[j], + x3[k] * x3[k]);
-                r = sqrt(r);
-                f_exp = exp((r - ism.rwarm) / ism.sigma);
-                f1 = 1. - f_exp;
-                f2 = f_exp;
-                nc *= f1 * ism.nwarm + f2 * ism.nhot;
+//                r = DIM_EXPAND(x1[i] * x1[i], + x2[j] * x2[j], + x3[k] * x3[k]);
+//                r = sqrt(r);
+//                f_exp = exp((r - ism.rwarm) / ism.sigma);
+//                f1 = 1. - f_exp;
+//                f2 = f_exp;
+//                nc *= f1 * ism.nwarm + f2 * ism.nhot;
 
                 /* Apply critical temperature criterion */
-                T_w = ism.nhot / nc * ism.Thot;
-                nc = T_w > ism.Tcrit ? ism.nhot : nc;
+//                T_w = ism.nhot / nc * ism.Thot;
+//                nc = T_w > ism.Tcrit ? ism.nhot : nc;
 
         #if START_MODE == START_MODE_HALO
 
@@ -203,15 +199,15 @@ void InitDomain (Data *d, Grid *grid)
 
                 r3 = sqrt(x1[i] * x1[i] + x2[j] * x2[j] + x3[k] * x3[k]);
 
-                d->Vc[RHO][k][j][i] = nc;
-                d->Vc[PRS][k][j][i] = nc * ism.te / 0.6063;
-                d->Vc[TRC][k][j][i] = 0;
-                d->Vc[TRC + 1][k][j][i] = 1;
+//                d->Vc[RHO][k][j][i] = nc;
+//                d->Vc[PRS][k][j][i] = nc * ism.te / 0.6063;
+//                d->Vc[TRC][k][j][i] = 0;
+//                d->Vc[TRC + 1][k][j][i] = 1;
 
             if (r3 <= agn.radius) {
                 d->Vc[RHO][k][j][i] = agn.rho;
                 d->Vc[PRS][k][j][i] = agn.prs;
-                d->Vc[VX1][k][j][i] = agn.speed;
+                d->Vc[VX3][k][j][i] = agn.speed;
                 d->Vc[TRC][k][j][i] = 1;
                 d->Vc[TRC + 1][k][j][i] = 0;
             }
@@ -219,7 +215,8 @@ void InitDomain (Data *d, Grid *grid)
         #endif
     }
 
-    InputDataClose(id);
+//    InputDataClose(id);
+
 
 
 
@@ -281,8 +278,8 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
  *
  *********************************************************************** */
 {
-  int   i, j, k, r2, r3, nv;
-  double  *x1, *x2, *x3;
+  int   i, j, k, n;
+  double  r2, *x1, *x2, *x3;
 
   x1 = grid->x[IDIR];
   x2 = grid->x[JDIR];
@@ -294,46 +291,17 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     }
   }
 
-  if (side == X1_BEG){  /* -- X1_BEG boundary -- */
-    if (box->vpos == CENTER) {
-      BOX_LOOP(box,k,j,i) {
-        #if START_MODE == START_MODE_AGN
-          r2 = sqrt(x2[j] * x2[j] + x3[k] * x3[k]);
-          if (r2 <= agn.radius) {
-              d->Vc[RHO][k][j][i] = agn.rho;
-              d->Vc[PRS][k][j][i] = agn.prs;
-              d->Vc[VX1][k][j][i] = agn.speed;
-              d->Vc[VX2][k][j][i] = 0;
-              d->Vc[VX3][k][j][i] = 0;
-              d->Vc[TRC][k][j][i] = 1;
-              d->Vc[TRC+1][k][j][i] = 0;
-          } else {
-              d->Vc[RHO][k][j][i] = d->Vc[RHO][k][-j][i];
-              d->Vc[PRS][k][j][i] = d->Vc[RHO][k][-j][i];
-              d->Vc[VX1][k][j][i] = 0;
-              d->Vc[VX2][k][j][i] = 0;
-              d->Vc[VX3][k][j][i] = 0;
-              d->Vc[TRC][k][j][i] = 0;
-              d->Vc[TRC+1][k][j][i] = 0;
-          }
-        #elif START_MODE == START_MODE_HALO
-              d->Vc[RHO][k][j][i] = d->Vc[RHO][k][-j][i];
-              d->Vc[PRS][k][j][i] = d->Vc[RHO][k][-j][i];
-              d->Vc[VX1][k][j][i] = 0;
-              d->Vc[VX2][k][j][i] = 0;
-              d->Vc[VX3][k][j][i] = 0;
-              d->Vc[TRC][k][j][i] = 0;
-              d->Vc[TRC+1][k][j][i] = 0;
-        #endif
-      }
-    }else if (box->vpos == X1FACE){
-      BOX_LOOP(box,k,j,i){  }
-    }else if (box->vpos == X2FACE){
-      BOX_LOOP(box,k,j,i){  }
-    }else if (box->vpos == X3FACE){
-      BOX_LOOP(box,k,j,i){  }
+    if (side == X1_BEG){  /* -- X1_BEG boundary -- */
+        if (box->vpos == CENTER) {
+            BOX_LOOP(box,k,j,i){  }
+        }else if (box->vpos == X1FACE){
+            BOX_LOOP(box,k,j,i){  }
+        }else if (box->vpos == X2FACE){
+            BOX_LOOP(box,k,j,i){  }
+        }else if (box->vpos == X3FACE){
+            BOX_LOOP(box,k,j,i){  }
+        }
     }
-  }
 
   if (side == X1_END){  /* -- X1_END boundary -- */
     if (box->vpos == CENTER) {
@@ -371,17 +339,41 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     }
   }
 
-  if (side == X3_BEG){  /* -- X3_BEG boundary -- */
-    if (box->vpos == CENTER) {
-      BOX_LOOP(box,k,j,i){  }
-    }else if (box->vpos == X1FACE){
-      BOX_LOOP(box,k,j,i){  }
-    }else if (box->vpos == X2FACE){
-      BOX_LOOP(box,k,j,i){  }
-    }else if (box->vpos == X3FACE){
-      BOX_LOOP(box,k,j,i){  }
+    if (side == X3_BEG){  /* -- X3_BEG boundary -- */
+        if (box->vpos == CENTER) {
+            BOX_LOOP(box,k,j,i) {
+#if START_MODE == START_MODE_AGN
+                        r2 = sqrt(x1[i] * x1[i] + x2[j] * x2[j]);
+                        if (r2 <= agn.radius) {
+                            d->Vc[RHO][k][j][i] = agn.rho;
+                            d->Vc[PRS][k][j][i] = agn.prs;
+                            d->Vc[VX1][k][j][i] = 0;
+                            d->Vc[VX2][k][j][i] = 0;
+                            d->Vc[VX3][k][j][i] = agn.speed;
+                            d->Vc[TRC][k][j][i] = 1.;
+                            d->Vc[TRC+1][k][j][i] = 0;
+                        } else {
+                            NVAR_LOOP(n) d->Vc[n][k][j][i] = d->Vc[n][2 * KBEG - k - 1][j][i];
+                            d->Vc[VX3][k][j][i] *= -1;
+                        }
+#elif START_MODE == START_MODE_HALO
+                        d->Vc[RHO][k][j][i] = d->Vc[RHO][k][-j][i];
+              d->Vc[PRS][k][j][i] = d->Vc[RHO][k][-j][i];
+              d->Vc[VX1][k][j][i] = 0;
+              d->Vc[VX2][k][j][i] = 0;
+              d->Vc[VX3][k][j][i] = 0;
+              d->Vc[TRC][k][j][i] = 0;
+              d->Vc[TRC+1][k][j][i] = 0;
+#endif
+                    }
+        }else if (box->vpos == X1FACE){
+            BOX_LOOP(box,k,j,i){  }
+        }else if (box->vpos == X2FACE){
+            BOX_LOOP(box,k,j,i){  }
+        }else if (box->vpos == X3FACE){
+            BOX_LOOP(box,k,j,i){  }
+        }
     }
-  }
 
   if (side == X3_END){  /* -- X3_END boundary -- */
     if (box->vpos == CENTER) {
