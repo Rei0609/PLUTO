@@ -183,9 +183,9 @@ void InitDomain (Data *d, Grid *grid)
 //                f1 = 1. - f_exp;
 //                f2 = f_exp;
 //                nc *= f1 * ism.nhot + f2 * ism.nwarm;
-                  f = 1 + exp(ism.sigma * (r - ism.rwarm));
-                  f = (ism.nwarm-ism.nhot) * 1/f + ism.nhot;
-                  nc *= f;
+                  f = 1 + exp((r - ism.rwarm) / ism.sigma);
+                  f = (log10(ism.nwarm)- log10(ism.nhot)) * 1/f + log10(ism.nhot);
+                  nc *= pow(10, f);
 
                 /* Apply critical temperature criterion */
                 T_w = ism.nhot / nc * ism.Thot;
