@@ -114,20 +114,19 @@ void Init (double *v, double x1, double x2, double x3)
         ism.rwarm = g_inputParam[PAR_RADIUS_W];
         ism.nwarm = g_inputParam[PAR_RHOW];
         ism.nhot = g_inputParam[PAR_RHOH];
-        ism.Thot = g_inputParam[PAR_THOT];
+        ism.Thot = g_inputParam[PAR_THOT] / KELVIN;
         ism.sigma = g_inputParam[PAR_SIGMA];
-        ism.Tcrit = g_inputParam[PAR_TCRIT];
-        ism.te = g_inputParam[PAR_THOT] / KELVIN;
+        ism.Tcrit = g_inputParam[PAR_TCRIT] / KELVIN;
 
         ism_once = 1;
     }
 
 
-  v[RHO] = g_inputParam[PAR_RHOH];
+  v[RHO] = ism.nhot;
   v[VX1] = 0.0;
   v[VX2] = 0.0;
   v[VX3] = 0.0;
-  v[PRS] = v[RHO] * ism.te /0.6063;
+  v[PRS] = v[RHO] * ism.Thot /0.6063;
   v[TRC] = 0.0;
   v[TRC+1] = 0.0;
 
@@ -165,27 +164,26 @@ void InitDomain (Data *d, Grid *grid)
 //    double *x3r = grid->xr[KDIR];
 
     /* Interpolate density */
-    id = InputDataOpen("input-rho.flt", "grid_in.out", " ", 0, CENTER);
+    id = InputDataOpen("input-rho_512_12.flt", "grid_in_512.out", " ", 0, CENTER);
 
-    InputDataGridSize (id, size);
-    offset = (long) size[0] * (long) size[1] * (long) size[2];
 
     /* Smooth cloud region */
-    TOT_LOOP(k, j, i) {
+    DOM_LOOP(k, j, i) {
 
                 /* Get fractal cube */
                 nc = InputDataInterpolate(id, x1[i], x2[j], x3[k]);
-
                 /* Apodize with tapered profile */
                 r = DIM_EXPAND(x1[i] * x1[i], + x2[j] * x2[j], + x3[k] * x3[k]);
                 r = sqrt(r);
-//                f_exp = exp((r - ism.rwarm) / ism.sigma);
-//                f1 = 1. - f_exp;
-//                f2 = f_exp;
-//                nc *= f1 * ism.nhot + f2 * ism.nwarm;
-                  f = 1 + exp((r - ism.rwarm) / ism.sigma);
-                  f = (log10(ism.nwarm)- log10(ism.nhot)) * 1/f + log10(ism.nhot);
-                  nc *= pow(10, f);
+//              f_exp = exp((r - ism.rwarm) / ism.sigma);
+//              f1 = 1. - f_exp;
+//              f2 = f_exp;
+//              nc *= f1 * ism.nhot + f2 * ism.nwarm;
+                f = 1 + exp((r - ism.rwarm) / ism.sigma);
+                f = (log10(ism.nwarm) - log10(ism.nhot)) * 1/f + log10(ism.nhot);
+                nc *= pow(10, f);
+//                f = (ism.nwarm - ism.nhot) * 1/f + ism.nhot;
+//                nc *= f;
 
                 /* Apply critical temperature criterion */
                 T_w = ism.nhot / nc * ism.Thot;
@@ -194,7 +192,7 @@ void InitDomain (Data *d, Grid *grid)
         #if START_MODE == START_MODE_HALO
 
                 d->Vc[RHO][k][j][i] = nc;
-                d->Vc[PRS][k][j][i] = nc * ism.te / 0.6063;
+                d->Vc[PRS][k][j][i] = nc * ism.Thot / 0.6063;
                 d->Vc[TRC][k][j][i] = 0;
                 d->Vc[TRC + 1][k][j][i] = 1;
 
@@ -203,7 +201,7 @@ void InitDomain (Data *d, Grid *grid)
                 r3 = sqrt(x1[i] * x1[i] + x2[j] * x2[j] + x3[k] * x3[k]);
 
                 d->Vc[RHO][k][j][i] = nc;
-                d->Vc[PRS][k][j][i] = nc * ism.te / 0.6063;
+                d->Vc[PRS][k][j][i] = nc * ism.Thot / 0.6063;
                 d->Vc[TRC][k][j][i] = 0;
                 d->Vc[TRC + 1][k][j][i] = 1;
 
@@ -360,13 +358,9 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
                             d->Vc[VX3][k][j][i] *= -1;
                         }
 #elif START_MODE == START_MODE_HALO
-                        d->Vc[RHO][k][j][i] = d->Vc[RHO][k][-j][i];
-              d->Vc[PRS][k][j][i] = d->Vc[RHO][k][-j][i];
-              d->Vc[VX1][k][j][i] = 0;
-              d->Vc[VX2][k][j][i] = 0;
-              d->Vc[VX3][k][j][i] = 0;
-              d->Vc[TRC][k][j][i] = 0;
-              d->Vc[TRC+1][k][j][i] = 0;
+                            NVAR_LOOP(n) d->Vc[n][k][j][i] = d->Vc[n][2 * KBEG - k - 1][j][i];
+                            d->Vc[VX3][k][j][i] *= -1;
+
 #endif
                     }
         }else if (box->vpos == X1FACE){
