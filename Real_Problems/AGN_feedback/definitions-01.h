@@ -37,7 +37,11 @@
 #define  UNIT_VELOCITY                  CONST_c
 #define  UNIT_LENGTH                    (1000*CONST_pc)
 #define  START_MODE_AGN                 0
-#define  START_MODE_HALO                1
-#define  START_MODE                     START_MODE_AGN
+#define  START_MODE_CLOUD               1
+#define  START_MODE_HALO                2
+#define  START_MODE                     START_MODE_HALO
+
+
+
 
 /* [End] user-defined constants (do not change this line) */

@@ -36,7 +36,7 @@ typedef struct {
 } ISM;
 ISM ism;
 
-
+//  1 time scale = 3.*10^3 year
 
 /* ********************************************************************* */
 void Init (double *v, double x1, double x2, double x3)
@@ -154,7 +154,7 @@ void InitDomain (Data *d, Grid *grid)
 {
     int i, j, k;
     int id, size[3];
-    double r, r3, f_exp, f1, f2, f, nc, T_w;
+    double r, r3, f_exp, f1, f2, f, nc, trw,  T_w;
     long int offset, offset1;
     double *x1 = grid->x[IDIR];
     double *x2 = grid->x[JDIR];
@@ -164,7 +164,7 @@ void InitDomain (Data *d, Grid *grid)
 //    double *x3r = grid->xr[KDIR];
 
     /* Interpolate density */
-    id = InputDataOpen("input-rho_512_12.flt", "grid_in_512.out", " ", 0, CENTER);
+    id = InputDataOpen("input-rho_128_12.flt", "grid_in_128.out", " ", 0, CENTER);
 
 
     /* Smooth cloud region */
@@ -188,8 +188,9 @@ void InitDomain (Data *d, Grid *grid)
                 /* Apply critical temperature criterion */
                 T_w = ism.nhot / nc * ism.Thot;
                 nc = T_w > ism.Tcrit ? ism.nhot : nc;
+                trw = T_w > ism.Tcrit ? 0 : 1;
 
-        #if START_MODE == START_MODE_HALO
+        #if START_MODE == START_MODE_CLOUD
 
                 d->Vc[RHO][k][j][i] = nc;
                 d->Vc[PRS][k][j][i] = nc * ism.Thot / 0.6063;
@@ -201,9 +202,26 @@ void InitDomain (Data *d, Grid *grid)
                 r3 = sqrt(x1[i] * x1[i] + x2[j] * x2[j] + x3[k] * x3[k]);
 
                 d->Vc[RHO][k][j][i] = nc;
-                d->Vc[PRS][k][j][i] = nc * ism.Thot / 0.6063;
+                d->Vc[PRS][k][j][i] = ism.nhot * ism.Thot / 0.6063;
                 d->Vc[TRC][k][j][i] = 0;
-                d->Vc[TRC + 1][k][j][i] = 1;
+                d->Vc[TRC + 1][k][j][i] = trw;
+
+            if (r3 <= agn.radius) {
+                d->Vc[RHO][k][j][i] = agn.rho;
+                d->Vc[PRS][k][j][i] = agn.prs;
+                d->Vc[VX3][k][j][i] = agn.speed;
+                d->Vc[TRC][k][j][i] = 1;
+                d->Vc[TRC + 1][k][j][i] = 0;
+            }
+
+        #elif START_MODE == START_MODE_HALO
+
+                r3 = sqrt(x1[i] * x1[i] + x2[j] * x2[j] + x3[k] * x3[k]);
+
+                d->Vc[RHO][k][j][i] = ism.nhot;
+                d->Vc[PRS][k][j][i] = ism.nhot * ism.Thot / 0.6063;
+                d->Vc[TRC][k][j][i] = 0;
+                d->Vc[TRC + 1][k][j][i] = 0;
 
             if (r3 <= agn.radius) {
                 d->Vc[RHO][k][j][i] = agn.rho;
@@ -357,9 +375,23 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
                             NVAR_LOOP(n) d->Vc[n][k][j][i] = d->Vc[n][2 * KBEG - k - 1][j][i];
                             d->Vc[VX3][k][j][i] *= -1;
                         }
-#elif START_MODE == START_MODE_HALO
+#elif START_MODE == START_MODE_CLOUD
                             NVAR_LOOP(n) d->Vc[n][k][j][i] = d->Vc[n][2 * KBEG - k - 1][j][i];
                             d->Vc[VX3][k][j][i] *= -1;
+#elif START_MODE == START_MODE_HALO
+                        r2 = sqrt(x1[i] * x1[i] + x2[j] * x2[j]);
+                        if (r2 <= agn.radius) {
+                            d->Vc[RHO][k][j][i] = agn.rho;
+                            d->Vc[PRS][k][j][i] = agn.prs;
+                            d->Vc[VX1][k][j][i] = 0;
+                            d->Vc[VX2][k][j][i] = 0;
+                            d->Vc[VX3][k][j][i] = agn.speed;
+                            d->Vc[TRC][k][j][i] = 1.;
+                            d->Vc[TRC+1][k][j][i] = 0;
+                        } else {
+                            NVAR_LOOP(n) d->Vc[n][k][j][i] = d->Vc[n][2 * KBEG - k - 1][j][i];
+                            d->Vc[VX3][k][j][i] *= -1;
+                        }
 
 #endif
                     }
