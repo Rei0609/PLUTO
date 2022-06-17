@@ -154,7 +154,8 @@ void InitDomain (Data *d, Grid *grid)
 {
     int i, j, k;
     int id, size[3];
-    double r, r3, f_exp, f1, f2, f, nc, trw,  T_w;
+    double r, r2, r3, f_exp, f1, f2, f, nc, trw, T_w;
+    double r_f, focus, dis, r_1, r_2;
     long int offset, offset1;
     double *x1 = grid->x[IDIR];
     double *x2 = grid->x[JDIR];
@@ -198,6 +199,7 @@ void InitDomain (Data *d, Grid *grid)
                 d->Vc[TRC + 1][k][j][i] = 1;
 
         #elif START_MODE == START_MODE_AGN
+             if (agn.radius <= 0.1) {
 
                 r3 = sqrt(x1[i] * x1[i] + x2[j] * x2[j] + x3[k] * x3[k]);
 
@@ -206,15 +208,48 @@ void InitDomain (Data *d, Grid *grid)
                 d->Vc[TRC][k][j][i] = 0;
                 d->Vc[TRC + 1][k][j][i] = trw;
 
-            if (r3 <= agn.radius) {
-                d->Vc[RHO][k][j][i] = agn.rho;
-                d->Vc[PRS][k][j][i] = agn.prs;
-                d->Vc[VX3][k][j][i] = agn.speed;
-                d->Vc[TRC][k][j][i] = 1;
+                if (r3 <= agn.radius) {
+                    d->Vc[RHO][k][j][i] = agn.rho;
+                    d->Vc[PRS][k][j][i] = agn.prs;
+                    d->Vc[VX3][k][j][i] = agn.speed;
+                    d->Vc[TRC][k][j][i] = 1;
+                    d->Vc[TRC + 1][k][j][i] = 0;
+                }
+            } else {
+
+                r2 = sqrt(x1[i] * x1[i] + x2[j] * x2[j]);
+
+                /* r_f is focus spot of ellipsoid */
+                r_f = 0.1;
+
+                /* Ellipsoidal shell generation */
+                focus = sqrt(agn.radius * agn.radius - r_f * r_f);
+                r_1 = r2 + focus;
+                r_1 = sqrt(x3[k] * x3[k] + r_1 * r_1);
+                r_2 = r2 - focus;
+                r_2 = sqrt(x3[k] * x3[k] + r_2 * r_2);
+                dis = r_1 + r_2;
+
+                d->Vc[RHO][k][j][i] = ism.nhot;
+                d->Vc[PRS][k][j][i] = ism.nhot * ism.Thot / 0.6063;
+                d->Vc[TRC][k][j][i] = 0;
                 d->Vc[TRC + 1][k][j][i] = 0;
+
+                if (dis <= 2*agn.radius) {
+                    d->Vc[RHO][k][j][i] = agn.rho;
+                    d->Vc[PRS][k][j][i] = agn.prs;
+                    d->Vc[VX3][k][j][i] = agn.speed;
+                    d->Vc[TRC][k][j][i] = 1;
+                    d->Vc[TRC + 1][k][j][i] = 0;
+                }
+
             }
 
+
+
         #elif START_MODE == START_MODE_HALO
+
+            if (agn.radius <= 0.1) {
 
                 r3 = sqrt(x1[i] * x1[i] + x2[j] * x2[j] + x3[k] * x3[k]);
 
@@ -223,13 +258,44 @@ void InitDomain (Data *d, Grid *grid)
                 d->Vc[TRC][k][j][i] = 0;
                 d->Vc[TRC + 1][k][j][i] = 0;
 
-            if (r3 <= agn.radius) {
-                d->Vc[RHO][k][j][i] = agn.rho;
-                d->Vc[PRS][k][j][i] = agn.prs;
-                d->Vc[VX3][k][j][i] = agn.speed;
-                d->Vc[TRC][k][j][i] = 1;
+                if (r3 <= agn.radius) {
+                    d->Vc[RHO][k][j][i] = agn.rho;
+                    d->Vc[PRS][k][j][i] = agn.prs;
+                    d->Vc[VX3][k][j][i] = agn.speed;
+                    d->Vc[TRC][k][j][i] = 1;
+                    d->Vc[TRC + 1][k][j][i] = 0;
+                }
+            } else {
+
+                r2 = sqrt(x1[i] * x1[i] + x2[j] * x2[j]);
+
+                /* r_f is focus spot of ellipsoid */
+                r_f = 0.1;
+
+                /* Ellipsoidal shell generation */
+                focus = sqrt(agn.radius * agn.radius - r_f * r_f);
+                r_1 = r2 + focus;
+                r_1 = sqrt(x3[k] * x3[k] + r_1 * r_1);
+                r_2 = r2 - focus;
+                r_2 = sqrt(x3[k] * x3[k] + r_2 * r_2);
+                dis = r_1 + r_2;
+
+                d->Vc[RHO][k][j][i] = ism.nhot;
+                d->Vc[PRS][k][j][i] = ism.nhot * ism.Thot / 0.6063;
+                d->Vc[TRC][k][j][i] = 0;
                 d->Vc[TRC + 1][k][j][i] = 0;
+
+                if (dis <= 2*agn.radius) {
+                    d->Vc[RHO][k][j][i] = agn.rho;
+                    d->Vc[PRS][k][j][i] = agn.prs;
+                    d->Vc[VX3][k][j][i] = agn.speed;
+                    d->Vc[TRC][k][j][i] = 1;
+                    d->Vc[TRC + 1][k][j][i] = 0;
+                }
+
             }
+
+
 
         #endif
     }
