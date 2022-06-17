@@ -37,6 +37,6 @@
 #define  MU_TABLE                       1
 #define  MU_ANALYTIC                    2
 #define  MU_FRACTIONS                   3
-#define  MU_FNAME                       mutable.dat
+#define  MU_FNAME                       "mutable.dat"
 
 /* [End] user-defined constants (do not change this line) */
