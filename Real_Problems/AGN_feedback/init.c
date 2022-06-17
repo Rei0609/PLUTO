@@ -13,6 +13,8 @@
 /* ///////////////////////////////////////////////////////////////////// */
 #include "pluto.h"
 
+static double Profile(double r, int nv, double r0);
+
 typedef struct {
     double power;
     double mach;
@@ -363,10 +365,15 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
  *
  *********************************************************************** */
 {
-  int   i, j, k, n;
+  int   i, j, k, nv;
   double  r2, *x1, *x2, *x3;
+  double vwnd[NVAR], vrfl[NVAR];
 
-  x1 = grid->x[IDIR];
+  /* Region around the wind inlet where strong rarefactions are artificially shielded. Hardcoded. */
+  double rarefaction_guard_radius = 0.1;
+
+
+    x1 = grid->x[IDIR];
   x2 = grid->x[JDIR];
   x3 = grid->x[KDIR];
 
@@ -438,29 +445,35 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
                             d->Vc[TRC][k][j][i] = 1.;
                             d->Vc[TRC+1][k][j][i] = 0;
                         } else {
-                            NVAR_LOOP(n) d->Vc[n][k][j][i] = d->Vc[n][2 * KBEG - k - 1][j][i];
+                            NVAR_LOOP(nv) d->Vc[nv][k][j][i] = d->Vc[nv][2 * KBEG - k - 1][j][i];
                             d->Vc[VX3][k][j][i] *= -1;
                         }
 #elif START_MODE == START_MODE_CLOUD
-                            NVAR_LOOP(n) d->Vc[n][k][j][i] = d->Vc[n][2 * KBEG - k - 1][j][i];
+                            NVAR_LOOP(nv) d->Vc[nv][k][j][i] = d->Vc[nv][2 * KBEG - k - 1][j][i];
                             d->Vc[VX3][k][j][i] *= -1;
 #elif START_MODE == START_MODE_HALO
                         r2 = sqrt(x1[i] * x1[i] + x2[j] * x2[j]);
-                        if (r2 <= agn.radius) {
-                            d->Vc[RHO][k][j][i] = agn.rho;
-                            d->Vc[PRS][k][j][i] = agn.prs;
-                            d->Vc[VX1][k][j][i] = 0;
-                            d->Vc[VX2][k][j][i] = 0;
-                            d->Vc[VX3][k][j][i] = agn.speed;
-                            d->Vc[TRC][k][j][i] = 1.;
-                            d->Vc[TRC+1][k][j][i] = 0;
-                        } else {
-                            NVAR_LOOP(n) d->Vc[n][k][j][i] = d->Vc[n][2 * KBEG - k - 1][j][i];
-                            d->Vc[VX3][k][j][i] *= -1;
-                        }
+
+//                        if (r2 <= agn.radius) {
+                            vwnd[RHO] = agn.rho;
+                            vwnd[PRS] = agn.prs;
+                            vwnd[VX1] = 0;
+                            vwnd[VX2] = 0;
+                            vwnd[VX3] = agn.speed;
+                            vwnd[TRC] = 1.;
+                            vwnd[TRC+1] = 0;
+//                        } else {
+                            NVAR_LOOP(nv) vrfl[nv] = d->Vc[nv][2 * KBEG - k - 1][j][i];
+                           vrfl[VX3] *= -1;
+                        if (r2 > agn.radius && r2 < rarefaction_guard_radius)  vrfl[VX3] = 0;
+//                        }
+                        NVAR_LOOP(nv) d->Vc[nv][k][j][i] = vrfl[nv] + (vwnd[nv] - vrfl[nv]) * Profile(r2, nv, g_inputParam[PAR_RADIUS]);
+                    }
+
+
 
 #endif
-                    }
+
         }else if (box->vpos == X1FACE){
             BOX_LOOP(box,k,j,i){  }
         }else if (box->vpos == X2FACE){
@@ -519,3 +532,21 @@ double BodyForcePotential(double x1, double x2, double x3)
   return 0.0;
 }
 #endif
+
+/* ********************************************************************* */
+double Profile(double r, int nv, double r0)
+/*
+ *
+ *
+ *********************************************************************** */
+{
+    int xn = 14;
+
+    if (nv == RHO) r0 *= 1.1;
+
+#if GEOMETRY == SPHERICAL
+    r0 = 5.0/180.0*CONST_PI;
+#endif
+    return 1.0 / cosh(pow(r / r0, xn));
+}
+
