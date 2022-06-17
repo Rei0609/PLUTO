@@ -12,6 +12,8 @@
 */
 /* ///////////////////////////////////////////////////////////////////// */
 #include "pluto.h"
+#include "init_tools.h"
+#include "shock.h"
 
 /* ********************************************************************* */
 void Init (double *v, double x1, double x2, double x3)
@@ -22,7 +24,7 @@ void Init (double *v, double x1, double x2, double x3)
  * \param [out] v   a pointer to a vector of primitive variables
  * \param [in] x1   coordinate point in the 1st dimension
  * \param [in] x2   coordinate point in the 2nd dimension
- * \param [in] x3   coordinate point in the 3rdt dimension
+ * \param [in] x3   coordinate point in the 3rd dimension
  *
  * The meaning of x1, x2 and x3 depends on the geometry:
  * \f[ \begin{array}{cccl}
@@ -41,20 +43,86 @@ void Init (double *v, double x1, double x2, double x3)
  *
  *********************************************************************** */
 {
-  double r;
-  g_gamma = g_inputParam[GAMMA];
-  r = x1*x1 + x2*x2;
-  r = sqrt(r);
+  static int once0 = 0;
 
-  v[RHO] = 1.0;
-  v[VX1] = 0.0;
-  v[VX2] = 0.0;
-  v[VX3] = 0.0;
-  #if HAVE_ENERGY
-  v[PRS] = g_inputParam[P_OUT];
-  #endif
-  v[TRC] = 0.0;
-  if (r <= 0.3) v[PRS] = g_inputParam[P_IN];
+  /* Some initializations */
+  if (!once0) {
+    SetBaseNormalization();
+    SetIniNormalization();
+    once0 = 1;
+  }
+
+  /* Input parameters */
+  double rho1 = g_inputParam[PAR_RHO1] * ini_code[PAR_RHO1];
+  double rho2 = g_inputParam[PAR_RHO2] * ini_code[PAR_RHO2];
+  double te2 = g_inputParam[PAR_TE2] * ini_code[PAR_TE2];
+  double p1p2 = g_inputParam[PAR_P1P2] * ini_code[PAR_P1P2];
+  double mach = g_inputParam[PAR_MACH] * ini_code[PAR_MACH];
+
+  /* Get downstream mu from T -- not programmed yet
+   * need to create new fitting function. Or iterate. */
+  static int once1 = 0;
+  static double mu2 = 1.3;
+    if (!once1) {
+      double mu2_old = 0.6;
+      v[VX1] = v[VX2] = v[VX3] = 0.0;
+      v[TRC] = 1.0;
+      v[RHO] = 1.;
+      while (fabs(mu2 - mu2_old) > 0.01) {
+          v[PRS] = te2 / mu2;
+          mu2_old = mu2;
+          mu2 = MeanMolecularWeight(v);
+      }
+      once1 = 1;
+  }
+
+  /* Calculate pressures */
+  double prs1, prs2, vsnd;
+  prs2 = rho2 * te2  / mu2;
+  prs1 = p1p2 * prs2 / (g_gamma * mach * mach + 1.);
+  vsnd = sqrt(g_gamma * prs1 / rho1);
+
+  /* Calculate p* and u* so that we can transform by -u* and be in the frame of the contact discontinuity */
+
+  static int once2 = 0;
+  static double prs_star, u_star;
+    if (!once2) {
+      double q_l[] = {rho1, vsnd * mach, prs1};
+      double q_r[] = {rho2, 0, prs2};
+
+      prs_star = calc_p_star(q_l, q_r, g_gamma);
+      u_star = calc_u_star(prs_star, q_l, q_r, g_gamma);
+
+      once2 = 1;
+  }
+
+  /* Fill primitives array */
+
+  /* Cloud region */
+  if (x1 > 0.) {
+    v[RHO] = rho2;
+    v[VX1] = -u_star;
+    v[VX2] = 0.0;
+    v[VX3] = 0.0;
+#if HAVE_ENERGY
+    v[PRS] = prs2;
+#endif
+    v[TRC] = 1.0;
+  }
+
+  /* Hot, diffuse plasma region */
+  else {
+    v[RHO] = rho1;
+    v[VX1] = vsnd * mach - u_star;
+    v[VX2] = 0.0;
+    v[VX3] = 0.0;
+#if HAVE_ENERGY
+    v[PRS] = prs1;
+#endif
+    v[TRC] = 0.0;
+  }
+
+  g_minCoolingTemp = 100.;
 
   #if PHYSICS == MHD || PHYSICS == RMHD
   v[BX1] = 0.0;
@@ -90,6 +158,31 @@ void Analysis (const Data *d, Grid *grid)
  *
  *********************************************************************** */
 {
+
+    /* Find the biggest pressure gradient - that should be location of contact discontinuity */
+
+//    double * grad_rho = ARRAY_1D(NX1, double);
+//    double * x1 = grid->x[IDIR];
+//    double *rho = d->Vc[RHO][KBEG][JBEG];
+//    int k, j, i;
+//    int imax;
+//    double v_shift, v_sound;
+//
+//    GradFromArray(rho, x1, grad_rho, NX1);
+//    imax = ArgMaxArray(grad_rho, NX1);
+//
+//    /* Perform a Gallilean transform by the amount of the velocity at imax */
+//    v_shift = d->Vc[VX1][0][0][imax];
+//    v_sound = sqrt(g_gamma * d->Vc[PRS][0][0][imax] / d->Vc[RHO][0][0][imax]);
+//    TOT_LOOP(k, j, i) {
+//        d->Vc[VX1][k][j][i] -= (v_shift + v_sound);
+//    }
+//
+//    RBox box;
+//    RBoxDefine (0, NX1_TOT, 0, NX2_TOT, 0, NX3_TOT, CENTER, &box);
+//    PrimToCons3D(d->Vc, d->Uc, &box);
+
+//    printf("Shifting by v_shift + v_sound = %g\n", (v_shift + v_sound) * vn.v_norm / 1.e5);
 
 }
 #if PHYSICS == MHD

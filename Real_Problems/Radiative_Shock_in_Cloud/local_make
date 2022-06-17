@@ -1,0 +1,2 @@
+OBJ       += init_tools.o read_mu_table.o shock.o radiat_frac.o
+HEADERS   += init_tools.h read_mu_table.h shock.h radiat_frac.h
