@@ -112,14 +112,6 @@
 */
 /* ///////////////////////////////////////////////////////////////////// */
 #include "pluto.h"
-/* AYW --
- * Support variable mu from tabular data.
- * Support custom 1D interpolation routines.
- * Support normalization struct (vn) from init_tools. */
-#include "read_mu_table.h"
-#include "interpolation.h"
-#include "init_tools.h"
-/* -- AYW */
 
 #if (COOLING == MINEq)
   #include "cooling_defs.h"
@@ -150,26 +142,11 @@ double MeanMolecularWeight(double *v)
     mu =  (CONST_AH + FRAC_He*CONST_AHe + FRAC_Z*CONST_AZ) /
           (2.0 + 3.0*FRAC_He + FRAC_Z * (1.0 + CONST_AZ * 0.5));
 
-#elif MU_CALC == MU_TABLE
-
-    double por;
-
-    if (mu_por == NULL) {
-        ReadMuTable();
-    }
-
-    /* Value of p/rho in code units */
-    por = v[PRS] / v[RHO];
-
-    /* Interpolate */
-    return InterpolationWrapper(mu_por, mu_mu, mu_ndata, por);
-
-
 #elif MU_CALC == MU_ANALYTIC
 
     /* Value of log10(p/rho) in cgs units */
     double por;
-    por = log10(v[PRS] / v[RHO] * vn.pres_norm / vn.dens_norm);
+    por = log10(v[PRS] / v[RHO] * UNIT_VELOCITY * UNIT_VELOCITY);
 
     static double a = 11.48648535;
     static double w = 0.62276904;

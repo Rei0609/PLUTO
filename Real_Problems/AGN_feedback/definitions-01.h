@@ -43,9 +43,7 @@
 #define  MU_NORM                        0.60364
 #define  MU_CALC                        MU_ANALYTIC
 #define  MU_CONST                       0
-#define  MU_TABLE                       1
-#define  MU_ANALYTIC                    2
-#define  MU_FRACTIONS                   3
-#define  MU_FNAME                       "mutable.dat"
+#define  MU_ANALYTIC                    1
+#define  MU_FRACTIONS                   2
 
 /* [End] user-defined constants (do not change this line) */
