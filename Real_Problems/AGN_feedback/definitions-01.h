@@ -2,7 +2,7 @@
 #define  DIMENSIONS                     3
 #define  GEOMETRY                       CARTESIAN
 #define  BODY_FORCE                     NO
-#define  COOLING                        NO
+#define  COOLING                        TABULATED
 #define  RECONSTRUCTION                 PARABOLIC
 #define  TIME_STEPPING                  CHARACTERISTIC_TRACING
 #define  NTRACER                        2
@@ -40,8 +40,12 @@
 #define  START_MODE_CLOUD               1
 #define  START_MODE_HALO                2
 #define  START_MODE                     START_MODE_HALO
-
-
-
+#define  MU_NORM                        0.60364
+#define  MU_CALC                        MU_ANALYTIC
+#define  MU_CONST                       0
+#define  MU_TABLE                       1
+#define  MU_ANALYTIC                    2
+#define  MU_FRACTIONS                   3
+#define  MU_FNAME                       "mutable.dat"
 
 /* [End] user-defined constants (do not change this line) */

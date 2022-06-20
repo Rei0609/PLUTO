@@ -14,4 +14,10 @@ Config/
 Doc/
 Test_Problems/
 Real_Problems/AGN_wind/pluto
+Real_Problems/AGN_wind/makefile
+Real_Problems/AGN_wind/pluto.ini
+Real_Problems/AGN_wind/definitions.h
 Real_Problems/AGN_feedback/pluto
+Real_Problems/AGN_feedback/makefile
+Real_Problems/AGN_feedback/pluto.ini
+Real_Problems/AGN_feedback/definitions.h
