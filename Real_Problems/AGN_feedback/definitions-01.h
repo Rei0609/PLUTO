@@ -13,7 +13,7 @@
 
 #define  DUST_FLUID                     NO
 #define  EOS                            IDEAL
-#define  ENTROPY_SWITCH                 NO
+#define  ENTROPY_SWITCH                 SELECTIVE
 #define  THERMAL_CONDUCTION             NO
 #define  VISCOSITY                      NO
 #define  ROTATING_FRAME                 NO
@@ -35,6 +35,15 @@
 
 /* [Beg] user-defined constants (do not change this line) */
 
+#define  SHOCK_FLATTENING               MULTID
+#define  CHAR_LIMITING                  YES
+#define  CHTR_REF_STATE                 3
+#define  FAILSAFE                       YES
+#define  LIMITER                        MC_LIM
+#define  SHOW_TIME_STEPS                YES
+#define  VTK_TIME_INFO                  YES
+#define  VTK_VECTOR_DUMP                YES
+#define  WARNING_MESSAGES               YES
 #define  UNIT_DENSITY                   (0.6036*CONST_amu)
 #define  UNIT_VELOCITY                  CONST_c
 #define  UNIT_LENGTH                    (1000*CONST_pc)
