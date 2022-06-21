@@ -173,34 +173,27 @@ void InitDomain (Data *d, Grid *grid)
     /* Smooth cloud region */
     DOM_LOOP(k, j, i) {
 
+        trw = 0;
+        nc = ism.nhot;
+
+#if CLOUDS == YES
                 /* Get fractal cube */
                 nc = InputDataInterpolate(id, x1[i], x2[j], x3[k]);
+
                 /* Apodize with tapered profile */
                 r = DIM_EXPAND(x1[i] * x1[i], + x2[j] * x2[j], + x3[k] * x3[k]);
                 r = sqrt(r);
-//              f_exp = exp((r - ism.rwarm) / ism.sigma);
-//              f1 = 1. - f_exp;
-//              f2 = f_exp;
-//              nc *= f1 * ism.nhot + f2 * ism.nwarm;
+
                 f = 1 + exp((r - ism.rwarm) / ism.sigma);
                 f = (log10(ism.nwarm) - log10(ism.nhot)) * 1/f + log10(ism.nhot);
                 nc *= pow(10, f);
-//                f = (ism.nwarm - ism.nhot) * 1/f + ism.nhot;
-//                nc *= f;
 
                 /* Apply critical temperature criterion */
                 T_w = ism.nhot / nc * ism.Thot;
                 nc = T_w > ism.Tcrit ? ism.nhot : nc;
                 trw = T_w > ism.Tcrit ? 0 : 1;
+#endif
 
-        #if START_MODE == START_MODE_CLOUD
-
-                d->Vc[RHO][k][j][i] = nc;
-                d->Vc[PRS][k][j][i] = nc * ism.Thot / 0.6063;
-                d->Vc[TRC][k][j][i] = 0;
-                d->Vc[TRC + 1][k][j][i] = 1;
-
-        #elif START_MODE == START_MODE_AGN
              if (agn.radius <= 0.1) {
 
                 r3 = sqrt(x1[i] * x1[i] + x2[j] * x2[j] + x3[k] * x3[k]);
@@ -247,66 +240,9 @@ void InitDomain (Data *d, Grid *grid)
 
             }
 
-
-
-        #elif START_MODE == START_MODE_HALO
-
-            if (agn.radius <= 0.1) {
-
-                r3 = sqrt(x1[i] * x1[i] + x2[j] * x2[j] + x3[k] * x3[k]);
-
-                d->Vc[RHO][k][j][i] = ism.nhot;
-                d->Vc[PRS][k][j][i] = ism.nhot * ism.Thot / 0.6063;
-                d->Vc[TRC][k][j][i] = 0;
-                d->Vc[TRC + 1][k][j][i] = 0;
-
-                if (r3 <= agn.radius) {
-                    d->Vc[RHO][k][j][i] = agn.rho;
-                    d->Vc[PRS][k][j][i] = agn.prs;
-                    d->Vc[VX3][k][j][i] = agn.speed;
-                    d->Vc[TRC][k][j][i] = 1;
-                    d->Vc[TRC + 1][k][j][i] = 0;
-                }
-            } else {
-
-                r2 = sqrt(x1[i] * x1[i] + x2[j] * x2[j]);
-
-                /* r_f is focus spot of ellipsoid */
-                r_f = 0.1;
-
-                /* Ellipsoidal shell generation */
-                focus = sqrt(agn.radius * agn.radius - r_f * r_f);
-                r_1 = r2 + focus;
-                r_1 = sqrt(x3[k] * x3[k] + r_1 * r_1);
-                r_2 = r2 - focus;
-                r_2 = sqrt(x3[k] * x3[k] + r_2 * r_2);
-                dis = r_1 + r_2;
-
-                d->Vc[RHO][k][j][i] = ism.nhot;
-                d->Vc[PRS][k][j][i] = ism.nhot * ism.Thot / 0.6063;
-                d->Vc[TRC][k][j][i] = 0;
-                d->Vc[TRC + 1][k][j][i] = 0;
-
-                if (dis <= 2*agn.radius) {
-                    d->Vc[RHO][k][j][i] = agn.rho;
-                    d->Vc[PRS][k][j][i] = agn.prs;
-                    d->Vc[VX3][k][j][i] = agn.speed;
-                    d->Vc[TRC][k][j][i] = 1;
-                    d->Vc[TRC + 1][k][j][i] = 0;
-                }
-
-            }
-
-
-
-        #endif
     }
 
     InputDataClose(id);
-
-
-
-
 
 }
 
@@ -434,26 +370,10 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     if (side == X3_BEG){  /* -- X3_BEG boundary -- */
         if (box->vpos == CENTER) {
             BOX_LOOP(box,k,j,i) {
-#if START_MODE == START_MODE_AGN
-                        r2 = sqrt(x1[i] * x1[i] + x2[j] * x2[j]);
-                        if (r2 <= agn.radius) {
-                            d->Vc[RHO][k][j][i] = agn.rho;
-                            d->Vc[PRS][k][j][i] = agn.prs;
-                            d->Vc[VX1][k][j][i] = 0;
-                            d->Vc[VX2][k][j][i] = 0;
-                            d->Vc[VX3][k][j][i] = agn.speed;
-                            d->Vc[TRC][k][j][i] = 1.;
-                            d->Vc[TRC+1][k][j][i] = 0;
-                        } else {
-                            NVAR_LOOP(nv) d->Vc[nv][k][j][i] = d->Vc[nv][2 * KBEG - k - 1][j][i];
-                            d->Vc[VX3][k][j][i] *= -1;
-                        }
-#elif START_MODE == START_MODE_CLOUD
-                        NVAR_LOOP(nv) d->Vc[nv][k][j][i] = d->Vc[nv][2 * KBEG - k - 1][j][i];
-                            d->Vc[VX3][k][j][i] *= -1;
-#elif START_MODE == START_MODE_HALO
+
                         r2 = sqrt(x1[i] * x1[i] + x2[j] * x2[j]);
 
+                        /* Wind primitives and reflective BC primitives */
                         vwnd[RHO] = agn.rho;
                         vwnd[PRS] = agn.prs;
                         vwnd[VX1] = 0;
@@ -467,14 +387,10 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
                         vrfl_prof = Profile(r2, nv, 4, g_inputParam[PAR_RFGUARD]) - 1.;
                         vrfl[VX3] *= vrfl_prof;
 
-                        /* Apply edge-smoothed wind profile - generally not needed */
+                        /* Apply edge-smoothed wind profile */
                         NVAR_LOOP(nv) d->Vc[nv][k][j][i] = vrfl[nv] + (vwnd[nv] - vrfl[nv]) *
-                                Profile(r2, nv, g_inputParam[PAR_WPROF_IDX], g_inputParam[PAR_RADIUS]);
+                                Profile(r2, nv, g_inputParam[PAR_WPROF_IDX], agn.radius);
                     }
-
-
-
-#endif
 
         }else if (box->vpos == X1FACE){
             BOX_LOOP(box,k,j,i){  }

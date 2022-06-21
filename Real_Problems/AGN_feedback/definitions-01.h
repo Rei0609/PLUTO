@@ -56,5 +56,6 @@
 #define  MU_CONST                       0
 #define  MU_ANALYTIC                    1
 #define  MU_FRACTIONS                   2
+#define  CLOUDS                         YES
 
 /* [End] user-defined constants (do not change this line) */
