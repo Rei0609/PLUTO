@@ -7,7 +7,7 @@
 #define  TIME_STEPPING                  CHARACTERISTIC_TRACING
 #define  NTRACER                        2
 #define  PARTICLES                      NO
-#define  USER_DEF_PARAMETERS            10
+#define  USER_DEF_PARAMETERS            12
 
 /* -- physics dependent declarations -- */
 
@@ -30,6 +30,8 @@
 #define  PAR_TCRIT                      7
 #define  PAR_RADIUS_W                   8
 #define  PAR_SIGMA                      9
+#define  PAR_RFGUARD                    10
+#define  PAR_WPROF_IDX                  11
 
 /* [Beg] user-defined constants (do not change this line) */
 
