@@ -1,0 +1,3 @@
+01...07: radiative test simulation at 64^3 or below
+07: adiabatic test simulation at 64^3
+08: Runge Kutta 3, cfl 0.3, hllc - this should be stable for all simulations.

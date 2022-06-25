@@ -170,7 +170,7 @@ void InitDomain (Data *d, Grid *grid)
 //    double *x3r = grid->xr[KDIR];
 
     /* Interpolate density */
-    id = InputDataOpen("input-rho_128_12.flt", "grid_in_128.out", " ", 0, CENTER);
+    id = InputDataOpen("input-rho.flt", "grid_in.out", " ", 0, CENTER);
 
 
     /* Smooth cloud region */
