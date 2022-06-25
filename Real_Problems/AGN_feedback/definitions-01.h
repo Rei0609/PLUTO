@@ -47,10 +47,6 @@
 #define  UNIT_DENSITY                   (0.6036*CONST_amu)
 #define  UNIT_VELOCITY                  CONST_c
 #define  UNIT_LENGTH                    (1000*CONST_pc)
-#define  START_MODE_AGN                 0
-#define  START_MODE_CLOUD               1
-#define  START_MODE_HALO                2
-#define  START_MODE                     START_MODE_HALO
 #define  MU_NORM                        0.60364
 #define  MU_CALC                        MU_ANALYTIC
 #define  MU_CONST                       0

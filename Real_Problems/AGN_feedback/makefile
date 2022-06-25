@@ -76,6 +76,8 @@ OBJ += ppm_coeffs.o
 OBJ += ctu_step.o
 OBJ += char_tracing.o
 include $(SRC)/HD/makefile
+include $(SRC)/Cooling/makefile
+include $(SRC)/Cooling/Tabulated/makefile
 include $(SRC)/EOS/Ideal/makefile
 
 # ---------------------------------------------------------
