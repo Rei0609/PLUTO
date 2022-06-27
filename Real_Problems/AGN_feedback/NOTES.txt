@@ -1,3 +1,10 @@
 01...07: radiative test simulation at 64^3 or below
 07: adiabatic test simulation at 64^3
-08: Runge Kutta 3, cfl 0.3, hllc - this should be stable for all simulations.
+08: RK3, CFL 0.3, hllc, M  1.0, r 0.1  (fiducial)
+09: RK3, CFL 0.3, hllc, M  1.0, r 0.05
+10: RK3, CFL 0.3, hllc, M  1.0, r 0.3
+11: RK3, CFL 0.3, hllc, M  0.3, r 0.1
+12: RK3, CFL 0.3, hllc, M  1.7, r 0.1
+13: RK3, CFL 0.3, hllc, M  3.0, r 0.1
+14: RK3, CFL 0.3, hllc, M 10.0, r 0.1
+15: RK3, CFL 0.3, hllc, M  1.0, r 0.1 (adiabatic)
