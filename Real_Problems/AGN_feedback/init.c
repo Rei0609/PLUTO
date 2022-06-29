@@ -197,51 +197,32 @@ void InitDomain (Data *d, Grid *grid)
                 trw = T_w > ism.Tcrit ? 0 : 1;
 #endif
 
-             if (agn.radius <= 0.1) {
+        d->Vc[RHO][k][j][i] = nc;
+        d->Vc[PRS][k][j][i] = ism.nhot * ism.Thot / 0.6063;
+        d->Vc[TRC][k][j][i] = 0;
+        d->Vc[TRC + 1][k][j][i] = trw;
 
-                r3 = sqrt(x1[i] * x1[i] + x2[j] * x2[j] + x3[k] * x3[k]);
 
-                d->Vc[RHO][k][j][i] = nc;
-                d->Vc[PRS][k][j][i] = ism.nhot * ism.Thot / 0.6063;
-                d->Vc[TRC][k][j][i] = 0;
-                d->Vc[TRC + 1][k][j][i] = trw;
+        r2 = sqrt(x1[i] * x1[i] + x2[j] * x2[j]);
 
-                if (r3 <= agn.radius) {
-                    d->Vc[RHO][k][j][i] = agn.rho;
-                    d->Vc[PRS][k][j][i] = agn.prs;
-                    d->Vc[VX3][k][j][i] = agn.speed;
-                    d->Vc[TRC][k][j][i] = 1;
-                    d->Vc[TRC + 1][k][j][i] = 0;
-                }
-            } else {
+        /* r_f is focus spot of ellipsoid */
+        r_f = 0.02;
 
-                r2 = sqrt(x1[i] * x1[i] + x2[j] * x2[j]);
+        /* Ellipsoidal shell generation */
+        focus = sqrt(agn.radius * agn.radius - r_f * r_f);
+        r_1 = r2 + focus;
+        r_1 = sqrt(x3[k] * x3[k] + r_1 * r_1);
+        r_2 = r2 - focus;
+        r_2 = sqrt(x3[k] * x3[k] + r_2 * r_2);
+        dis = r_1 + r_2;
 
-                /* r_f is focus spot of ellipsoid */
-                r_f = 0.1;
-
-                /* Ellipsoidal shell generation */
-                focus = sqrt(agn.radius * agn.radius - r_f * r_f);
-                r_1 = r2 + focus;
-                r_1 = sqrt(x3[k] * x3[k] + r_1 * r_1);
-                r_2 = r2 - focus;
-                r_2 = sqrt(x3[k] * x3[k] + r_2 * r_2);
-                dis = r_1 + r_2;
-
-                d->Vc[RHO][k][j][i] = ism.nhot;
-                d->Vc[PRS][k][j][i] = ism.nhot * ism.Thot / 0.6063;
-                d->Vc[TRC][k][j][i] = 0;
-                d->Vc[TRC + 1][k][j][i] = 0;
-
-                if (dis <= 2*agn.radius) {
-                    d->Vc[RHO][k][j][i] = agn.rho;
-                    d->Vc[PRS][k][j][i] = agn.prs;
-                    d->Vc[VX3][k][j][i] = agn.speed;
-                    d->Vc[TRC][k][j][i] = 1;
-                    d->Vc[TRC + 1][k][j][i] = 0;
-                }
-
-            }
+        if (dis <= 2. * agn.radius) {
+            d->Vc[RHO][k][j][i] = agn.rho;
+            d->Vc[PRS][k][j][i] = agn.prs;
+            d->Vc[VX3][k][j][i] = agn.speed;
+            d->Vc[TRC][k][j][i] = 1;
+            d->Vc[TRC + 1][k][j][i] = 0;
+        }
 
     }
 
