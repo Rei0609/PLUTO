@@ -20,7 +20,11 @@ typedef struct cmdLine_{
   int jet;                /**< Follow jet evolution in a given direction */
   int nproc[3];           /**< User supplied number of processors */
   int xres;               /**< Change the resolution via command line */
-  char fill[26];               /* useless, it makes the struct a power of 2 */ 
+  /* AYW -- 2014-11-14 01:07 JST */
+  float maxtime;
+  //char fill[26];               /* useless, it makes the struct a power of 2 */
+  char fill[22];               /* useless, it makes the struct a power of 2 */
+  /* -- AYW */
 } cmdLine;
 
 /* ********************************************************************* */
@@ -462,9 +466,12 @@ typedef struct Runtime_{
   int     Nparticles_glob;  /**< Total number of particles in the whole domain */
   int     Nparticles_cell;  /**< Total number of particles per cell */
     
-  double  aux[32];         /* we keep aux inside this structure, 
+  /* AYW -- Increase number of aux parameters */
+  //double  aux[32];         /* we keep aux inside this structure,
+  double  aux[USER_DEF_PARAMETERS];         /* we keep aux inside this structure,
                               since in parallel execution it has
                               to be comunicated to all processors  */
+  /* -- AYW */
 } Runtime;
 
 
