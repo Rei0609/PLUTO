@@ -23,8 +23,8 @@ typedef struct {
     double area;
     double rho;
     double prs;
-} AGN;
-AGN agn;
+} AGN_PAR;
+AGN_PAR agn;
 
 typedef struct {
     double nhot;
@@ -68,7 +68,7 @@ void Init (double *v, double x1, double x2, double x3)
  *
  *********************************************************************** */
 {
-    //　AGN initial condition //
+    //　AGN_PAR initial condition //
     double mach, power, speed, area;
     double rho0, prs0, r_in, q;
     static int agn_once = 0;
@@ -92,7 +92,7 @@ void Init (double *v, double x1, double x2, double x3)
         q = (g_gamma - 1.) * mach * mach;
         q = 1. + 2. / q;
 
-        /* Init density and pressure of AGN */
+        /* Init density and pressure of AGN_PAR */
         rho0 = 2. * power / (speed * speed * speed * area * q);
         prs0 = (2. * power / speed - rho0 * speed * speed * area) *
                (g_gamma - 1.) / (2. * g_gamma * area);
@@ -202,7 +202,7 @@ void InitDomain (Data *d, Grid *grid)
         d->Vc[TRC][k][j][i] = 0;
         d->Vc[TRC + 1][k][j][i] = trw;
 
-
+#if AGN == YES
         r2 = sqrt(x1[i] * x1[i] + x2[j] * x2[j]);
 
         /* r_f is focus spot of ellipsoid */
@@ -222,7 +222,8 @@ void InitDomain (Data *d, Grid *grid)
             d->Vc[VX3][k][j][i] = agn.speed;
             d->Vc[TRC][k][j][i] = 1;
             d->Vc[TRC + 1][k][j][i] = 0;
-        }
+# endif
+
 
     }
 
@@ -355,6 +356,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
         if (box->vpos == CENTER) {
             BOX_LOOP(box,k,j,i) {
 
+#if AGN == YES
                         r2 = sqrt(x1[i] * x1[i] + x2[j] * x2[j]);
 
                         /* Wind primitives and reflective BC primitives */
@@ -374,6 +376,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
                         /* Apply edge-smoothed wind profile */
                         NVAR_LOOP(nv) d->Vc[nv][k][j][i] = vrfl[nv] + (vwnd[nv] - vrfl[nv]) *
                                 Profile(r2, nv, g_inputParam[PAR_WPROF_IDX], agn.radius);
+#endif
                     }
 
         }else if (box->vpos == X1FACE){
