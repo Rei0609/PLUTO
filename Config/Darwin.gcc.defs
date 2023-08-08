@@ -4,7 +4,7 @@
 #             
 ########################################################################
 
-CC       = gcc
+CC       = gcc-13
 CFLAGS   = -c -O3 -Wundef  
 #CFLAGS   = -c -fno-trapping-math -fno-signed-zeros -fassociative-math 
 LDFLAGS  = -lm 
