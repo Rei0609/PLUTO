@@ -72,7 +72,7 @@ void Init (double *v, double x1, double x2, double x3)
 {
     //　AGN initial condition //
     double mach, power, speed, area, lgamma, lgamma2;
-    double rho0, prs0, r_in, q_rel, q_non, x, chi, gamma_rel, gamma_non;
+    double rho0, prs0, r_in, q, q_rel, q_non, x, chi, gamma_rel, gamma_non, mach_non;
     static int agn_once = 0;
 
     if (! agn_once) {
@@ -95,6 +95,8 @@ void Init (double *v, double x1, double x2, double x3)
         /* Primitive variables from input parameters */
         lgamma2 = lgamma * lgamma;
         speed = sqrt(1 - 1 / lgamma2);
+        q = (gamma_non - 1.) * mach * mach;
+        q = 1. + 2. / q;
         q_rel = gamma_rel / (gamma_rel - 1.);
         q_non = gamma_non / (gamma_non - 1.);
 
@@ -118,19 +120,29 @@ void Init (double *v, double x1, double x2, double x3)
         printf("gamma:%f\n",gamma_rel);
 
 #if PHYSICS == HD
-        if (g_inputParam[PAR_NRJET] == 0) {
-        /* Init pressure of AGN (HD) */
-        prs0 = power / (speed * area) - rho0 * speed * speed / 2;
-        prs0 = prs0 / q_non;
+        if (g_inputParam[PAR_MACH_MATCH] == 1){
+            /* Init pressure and density of AGN (Mach number matched) */
+            rho0 = 2. * power / (speed * speed * speed * area * q);
+            prs0 = (2. * power / speed - rho0 * speed * speed * area) *
+                   (g_gamma - 1.) / (2. * g_gamma * area);
+
+        }
+        else {
+            if (g_inputParam[PAR_NRJET] == 0) {
+                /* Init pressure of AGN (density matched) */
+                prs0 = power / (speed * area) - rho0 * speed * speed / 2;
+                prs0 = prs0 / q_non;
+            } else {
+                /* Init density of AGN (pressure matched) */
+                rho0 = power / (speed * area) - q_non * prs0;
+                rho0 = rho0 * 2 / (speed * speed);
+            }
         }
 
-        else {
-        /* Init density of AGN (HD) */
-        rho0 = power / (speed * area) - q_non * prs0;
-        rho0 = rho0 * 2 / (speed * speed);
-         }
+        mach_non = speed / sqrt(gamma_non * prs0 / rho0);
 
-
+        printf("Mach_non:%f\n",mach_non);
+        printf("Rho_non:%f\n",rho0);
 
 #endif
 

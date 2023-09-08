@@ -1,4 +1,4 @@
-#define  PHYSICS                        RHD
+#define  PHYSICS                        HD
 #define  DIMENSIONS                     3
 #define  GEOMETRY                       CARTESIAN
 #define  BODY_FORCE                     NO
@@ -7,13 +7,16 @@
 #define  TIME_STEPPING                  RK3
 #define  NTRACER                        2
 #define  PARTICLES                      NO
-#define  USER_DEF_PARAMETERS            13
+#define  USER_DEF_PARAMETERS            14
 
 /* -- physics dependent declarations -- */
 
+#define  DUST_FLUID                     NO
 #define  EOS                            IDEAL
 #define  ENTROPY_SWITCH                 SELECTIVE
-#define  RADIATION                      NO
+#define  THERMAL_CONDUCTION             NO
+#define  VISCOSITY                      NO
+#define  ROTATING_FRAME                 NO
 
 /* -- user-defined parameters (labels) -- */
 
@@ -21,15 +24,16 @@
 #define  PAR_MACH                       1
 #define  PAR_GAMMA                      2
 #define  PAR_RADIUS                     3
-#define  PAR_NRJET                      4
-#define  PAR_RHOW                       5
-#define  PAR_RHOH                       6
-#define  PAR_THOT                       7
-#define  PAR_TCRIT                      8
-#define  PAR_RADIUS_W                   9
-#define  PAR_SIGMA                      10
-#define  PAR_RFGUARD                    11
-#define  PAR_WPROF_IDX                  12
+#define  PAR_MACH_MATCH                 4
+#define  PAR_NRJET                      5
+#define  PAR_RHOW                       6
+#define  PAR_RHOH                       7
+#define  PAR_THOT                       8
+#define  PAR_TCRIT                      9
+#define  PAR_RADIUS_W                   10
+#define  PAR_SIGMA                      11
+#define  PAR_RFGUARD                    12
+#define  PAR_WPROF_IDX                  13
 
 /* [Beg] user-defined constants (do not change this line) */
 
@@ -50,6 +54,6 @@
 #define  MU_CONST                       0
 #define  MU_ANALYTIC                    1
 #define  MU_FRACTIONS                   2
-#define  CLOUDS                         YES
+#define  CLOUDS                         NO
 
 /* [End] user-defined constants (do not change this line) */
