@@ -80,7 +80,7 @@ void Init (double *v, double x1, double x2, double x3)
         mach = g_inputParam[PAR_MACH];
         power = g_inputParam[PAR_POWER];
         lgamma = g_inputParam[PAR_GAMMA];
-        gamma_rel = 4./3.;
+        gamma_rel = 5./3.;
         gamma_non = 5./3.;
 
         /* Normalize to code units */
@@ -101,9 +101,9 @@ void Init (double *v, double x1, double x2, double x3)
         q_non = gamma_non / (gamma_non - 1.);
 
         /* Init parameter of AGN (RHD) */
-        chi = mach * mach / (lgamma2 * speed * speed) + 1;
-        chi = chi * (gamma_rel - 1);
-        prs0 = lgamma2 * area * speed * (chi + 1) * q_rel;
+        chi = mach * mach * (gamma_rel - 1) / (lgamma2 - 1);
+        chi = chi + gamma_rel - 2;
+        prs0 = lgamma2 * area * speed * ((1 - 1 / lgamma) * chi + 1) * q_rel;
         prs0 = power / prs0;
         rho0 = prs0 * q_rel * chi;
 
@@ -120,29 +120,30 @@ void Init (double *v, double x1, double x2, double x3)
         printf("gamma:%f\n",gamma_rel);
 
 #if PHYSICS == HD
-        if (g_inputParam[PAR_MACH_MATCH] == 1){
+
+        if (g_inputParam[PAR_NRJET] == 0) {
+            /* Init pressure of AGN (density matched) */
+            prs0 = power / (speed * area) - rho0 * speed * speed / 2;
+            prs0 = prs0 / q_non;
+        } else if (g_inputParam[PAR_NRJET] == 1) {
+            /* Init density of AGN (pressure matched) */
+            rho0 = power / (speed * area) - q_non * prs0;
+            rho0 = rho0 * 2 / (speed * speed);
+        } else {
             /* Init pressure and density of AGN (Mach number matched) */
             rho0 = 2. * power / (speed * speed * speed * area * q);
             prs0 = (2. * power / speed - rho0 * speed * speed * area) *
                    (g_gamma - 1.) / (2. * g_gamma * area);
+        }
 
-        }
-        else {
-            if (g_inputParam[PAR_NRJET] == 0) {
-                /* Init pressure of AGN (density matched) */
-                prs0 = power / (speed * area) - rho0 * speed * speed / 2;
-                prs0 = prs0 / q_non;
-            } else {
-                /* Init density of AGN (pressure matched) */
-                rho0 = power / (speed * area) - q_non * prs0;
-                rho0 = rho0 * 2 / (speed * speed);
-            }
-        }
 
         mach_non = speed / sqrt(gamma_non * prs0 / rho0);
 
         printf("Mach_non:%f\n",mach_non);
-        printf("Rho_non:%f\n",rho0);
+        printf("JetRho:%f\n",rho0);
+        printf("JetPrs:%f\n",prs0);
+        printf("JetSpd:%f\n",speed);
+        printf("Power:%f\n",power);
 
 #endif
 
