@@ -121,7 +121,6 @@ void Init (double *v, double x1, double x2, double x3)
         printf("Power:%f\n",power);
 
 #if PHYSICS == HD
-
         if (g_inputParam[PAR_NRJET] == 0) {
             /* Init pressure of AGN (density matched) */
             prs0 = power / (speed * area) - rho0 * speed * speed / 2;
