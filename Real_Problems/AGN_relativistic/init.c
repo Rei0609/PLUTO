@@ -118,6 +118,7 @@ void Init (double *v, double x1, double x2, double x3)
         printf("JetSpd:%f\n",speed);
         printf("Chi:%f\n",chi);
         printf("gamma:%f\n",gamma_rel);
+        printf("Power:%f\n",power);
 
 #if PHYSICS == HD
 
@@ -129,11 +130,16 @@ void Init (double *v, double x1, double x2, double x3)
             /* Init density of AGN (pressure matched) */
             rho0 = power / (speed * area) - q_non * prs0;
             rho0 = rho0 * 2 / (speed * speed);
-        } else {
+        } else if (g_inputParam[PAR_NRJET] == 2) {
             /* Init pressure and density of AGN (Mach number matched) */
             rho0 = 2. * power / (speed * speed * speed * area * q);
             prs0 = (2. * power / speed - rho0 * speed * speed * area) *
                    (g_gamma - 1.) / (2. * g_gamma * area);
+        } else {
+            /* Init pressure and density of AGN (Chi matched) */
+            prs0 = q_rel * speed * area * (speed * speed * chi / 2 + 1);
+            prs0 = power / prs0;
+            rho0 = q_rel * prs0 * chi;
         }
 
 
@@ -143,7 +149,6 @@ void Init (double *v, double x1, double x2, double x3)
         printf("JetRho:%f\n",rho0);
         printf("JetPrs:%f\n",prs0);
         printf("JetSpd:%f\n",speed);
-        printf("Power:%f\n",power);
 
 #endif
 
