@@ -61,7 +61,7 @@ void Radiat (double *v, double *rhs)
    --------------------------------------------- */
 
     /* Intead of T, we find the cooling rate as a function of T = rho / p */
-    gamma_ism = 5/3;
+    gamma_ism = 5./3.;
     prs = v[RHOE] * (gamma_ism - 1.0);
     if (prs < 0.0) {
         prs = g_smallPressure;

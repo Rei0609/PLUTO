@@ -136,7 +136,7 @@ void Init (double *v, double x1, double x2, double x3)
                    (g_gamma - 1.) / (2. * g_gamma * area);
         } else {
             /* Init pressure and density of AGN (Chi matched) */
-            prs0 = q_rel * speed * area * (speed * speed * chi / 2 + 1);
+            prs0 = q_rel * speed * area * (speed * speed * chi / 2. + 1.);
             prs0 = power / prs0;
             rho0 = q_rel * prs0 * chi;
         }
@@ -424,6 +424,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
                         vwnd[TRC] = 1.;
                         vwnd[TRC+1] = 0;
                         NVAR_LOOP(nv) vrfl[nv] = d->Vc[nv][2 * KBEG - k - 1][j][i];
+			vrfl[VX3] *= -1.0;
 
                         /* Create a region at radius PAR_RFGUARD that guards against rarefactions */
 //                        vrfl_prof = Profile(r2, nv, 4, g_inputParam[PAR_RFGUARD]) - 1.;

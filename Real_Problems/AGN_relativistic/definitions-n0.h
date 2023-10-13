@@ -11,9 +11,12 @@
 
 /* -- physics dependent declarations -- */
 
+#define  DUST_FLUID                     NO
 #define  EOS                            IDEAL
 #define  ENTROPY_SWITCH                 SELECTIVE
-#define  RADIATION                      NO
+#define  THERMAL_CONDUCTION             NO
+#define  VISCOSITY                      NO
+#define  ROTATING_FRAME                 NO
 
 /* -- user-defined parameters (labels) -- */
 
